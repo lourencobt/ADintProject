@@ -23,21 +23,34 @@ def gates():
     if request.method == 'POST': #With the Post come one json like {"id": 10, "secret":"9999", "location":"EA1"}
         #parse body
         body = request.json
-        id = body['id']
-        secret = body['secret']
-        location = body['location']
+
+        # TODO: Verify if body is correct
+        try:
+            id = body['id']
+            secret = body['secret']
+            location = body['location']
+        except KeyError:
+            abort(400)
 
         # Register Gate
         if newGate(id, secret, location) == 0:
             return {"secret": secret}
         else:
-            # TODO: Return appropriate error according to the return of newGate
-            abort(404)
+            # ! Confirm if this is the appropriate error. 400 Bad Request
+            # ! If the new data is in wrong format, should we inform the client??
+            abort(400)
     elif request.method == 'GET':
-        gatesData = listGates()
-        return jsonify(gatesData)
+        gates = listGates()
+        gatesList = []
+        for i in gates:
+            gatesList.append({"id":i.id, "secret":i.secret, "location":i.location, "activations":i.activations})
+
+        return jsonify(gatesList)
     else:
-        # TODO: Return appropriate error. In this case the HTTP method is wrong
-        abort(404)
+        # Never occurs this case, because of methods declare on app.route. However this is the intended error if 
+        # for some reason the users enters this route with a wrong method
+        # ! Confirm if this is needed
+        abort(405)
 
-
+if __name__ == "__main__":
+    app.run(host='0.0.0.0', port=8000, debug=True)
