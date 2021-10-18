@@ -2,7 +2,7 @@
 # * Implement REST API to access, manipulate gate information in database
 # * and implement additional operations
 
-from flask import Flask, render_template, request, abort
+from flask import Flask, request, abort
 from flask.json import jsonify
 
 from gateDB import *
