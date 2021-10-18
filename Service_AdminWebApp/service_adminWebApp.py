@@ -36,23 +36,22 @@ def generate_code():
 
 # TODO: Endpoint 1: for the UserApp to retrieve a new user code
     # URL: /UserApp/users/joao # ! URL's need to be revised
-
     # ! Think about the possible errors
 @app.route("/users/joao")
 def getNewCode():
     # Invalidate last code if still valid
     code = generate_code()
+
     JoaoCode['code'] = code
     JoaoCode['datetime'] = datetime.datetime.now()
-    print("JoaoCode: {}".format(JoaoCode))
+
     return {"code": code}
 
-# # TODO: Endpoint 2: for the Gate to verify if a code is valid
-#     # URL: /GateApp/ -> # ! URL's need to be revised
-
-#     # ! Think about the possible errors
+# TODO: Endpoint 2: for the Gate to verify if a code is valid
+    # URL: /GateApp/ -> # ! URL's need to be revised
 @app.route("/GateApp", methods=['POST'])
 def verifyCode():
+    # ! verify if request in the appropriate format
     data = request.json
     #Verify there is such a code and if it is still valid
     if JoaoCode["code"] == data["code"]:
@@ -65,27 +64,27 @@ def verifyCode():
         return {"valid": False}
 
 
-# # ! Don't Forget
-# # !     Every time the application is executed a new code is generated and retrieved
-# 
+# ! Don't Forget
+# !     Every time the application is executed a new code is generated and retrieved
 
-# # * AdminWebApp implementation
-# # * 2 pages
 
-# # TODO: Page 1: registration of a new gate
-#     # webpage with a form
-#     # Entries of the form
-#     #   gateID - unique identifier
-#     #   gateLocation - string 
-#     # 
-#     # If registration successful 
-#     #   show secret on admin browser
-#     # else:
-#     #   Show error
+# * AdminWebApp implementation
+# * 2 pages
 
-# # TODO: Page 2: listing of registered gates
-#     # show a table with gates info (id, location, secret, activations)
-#     # ! Think about the possible errors
+# TODO: Page 1: registration of a new gate
+    # webpage with a form
+    # Entries of the form
+    #   gateID - unique identifier
+    #   gateLocation - string 
+    # 
+    # If registration successful 
+    #   show secret on admin browser
+    # else:
+    #   Show error
+
+# TODO: Page 2: listing of registered gates
+    # show a table with gates info (id, location, secret, activations)
+    # ! Think about the possible errors
 
 
 if __name__ == "__main__":

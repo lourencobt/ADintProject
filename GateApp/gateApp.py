@@ -5,6 +5,8 @@
 
 import argparse
 from logging import error
+import requests
+import time
 
 SECRET_LEN = 4
 
@@ -21,26 +23,32 @@ args = parser.parse_args()
 
 gateDict = {"gateID": args.gateID[0], "gateSecret": args.gateSecret[0]}
 
+# ! Ask Teacher about this
+# print("Contacting Server ...")
+# # TODO: Send {gateID: __, gateSecret: __}  to the Server and wait for the response
 
-print("Contacting Server ...")
-# TODO: Send {gateID: __, gateSecret: __}  to the Server and wait for the response
-
-# TODO: verify if the server response is valid
-# if valid :
-#   print("The secret is valid for this gate")
-# else:
-#   print("The secret is not valid for this gate") 
-#   print("Exiting...")
-#   exit
+# # TODO: verify if the server response is valid
+# # if valid :
+# #   print("The secret is valid for this gate")
+# # else:
+# #   print("The secret is not valid for this gate") 
+# #   print("Exiting...")
+# #   exit
 
 while(1):
-    # TODO: read user code
-    # Type the user code : ______
 
-    # TODO: Contact Server and receive if user inserted code is valid or not
-    # if valid :
-    #   print("!!! Code Valid !!!")
-    #   print("!!! The gate will close in 6 seconds")
-    #   sleep(6)
-    # else:
-    # print("!!! Code Not Valid !!!")
+    # Read user code
+    userCode = input("Type the user code: ")
+    if userCode == 'q':
+        exit(0)
+
+    # Contact Server and receive if user inserted code is valid or not
+    r = requests.post("http://172.30.220.58:8000/GateApp", json={"code":userCode})
+    data = r.json()
+    if data['valid'] :
+      print("!!! Code Valid !!!")
+        # ! increment activations
+      print("!!! The gate will close in 6 seconds")
+      time.sleep(6)
+    else:
+        print("!!! Code Not Valid !!!")
