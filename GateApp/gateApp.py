@@ -3,7 +3,24 @@
 # * Gate Application that will run continuously and will simulate a real gate through the terminal
 # * In this version the code will be inserted through keyboard
 
-# TODO: Parse command line arguments
+import argparse
+from logging import error
+
+SECRET_LEN = 4
+
+# Parsing arguments
+def secret(string):
+    if(len(string) != SECRET_LEN):
+        raise error
+    return string
+
+parser = argparse.ArgumentParser(description="Gate Application that will run continuously and will simulate a real gate through the terminal")
+parser.add_argument('gateID', nargs=1, type=int, help="an integer corresponding to the ID of the gate")
+parser.add_argument('gateSecret', nargs=1, type=secret, help="a String with %d characters corresponding to the Secret of the gate" % (SECRET_LEN))
+args = parser.parse_args()
+
+gateDict = {"gateID": args.gateID[0], "gateSecret": args.gateSecret[0]}
+
 
 print("Contacting Server ...")
 # TODO: Send {gateID: __, gateSecret: __}  to the Server and wait for the response

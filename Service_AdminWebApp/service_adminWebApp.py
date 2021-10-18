@@ -11,8 +11,10 @@
 # Imports
 from flask import Flask, render_template, request, abort
 from flask.json import jsonify
+import datetime 
 
 SECRET_LEN = 4
+JoaoCode = {}
 
 app = Flask(__name__)
 
@@ -39,39 +41,52 @@ def generate_code():
 @app.route("/users/joao")
 def getNewCode():
     # Invalidate last code if still valid
-
     code = generate_code()
+    JoaoCode['code'] = code
+    JoaoCode['datetime'] = datetime.datetime.now()
+    print("JoaoCode: {}".format(JoaoCode))
     return {"code": code}
 
+# # TODO: Endpoint 2: for the Gate to verify if a code is valid
+#     # URL: /GateApp/ -> # ! URL's need to be revised
 
-
-# TODO: Endpoint 2: for the Gate to verify if a code is valid
-    # URL: /GateApp/ -> # ! URL's need to be revised
-
-    # ! Think about the possible errors
-@app.route("GateApp", methods=['POST'])
+#     # ! Think about the possible errors
+@app.route("/GateApp", methods=['POST'])
 def verifyCode():
-    #Verify there is such a code
-    #verify if it is still valid
+    data = request.json
+    #Verify there is such a code and if it is still valid
+    if JoaoCode["code"] == data["code"]:
+        # Code becomes invalid after 1 minute of creation
+        if datetime.datetime.now() - JoaoCode["datetime"] > datetime.timedelta(minutes = 1):
+            return {"valid": False}
+        else: 
+            return {"valid": True}
+    else: 
+        return {"valid": False}
 
-# ! Don't Forget
-# !     Every time the application is executed a new code is generated and retrieved
-# !     Code becomes invalid after 1 minute of creation or when a new code is generated
 
-# * AdminWebApp implementation
-# * 2 pages
+# # ! Don't Forget
+# # !     Every time the application is executed a new code is generated and retrieved
+# 
 
-# TODO: Page 1: registration of a new gate
-    # webpage with a form
-    # Entries of the form
-    #   gateID - unique identifier
-    #   gateLocation - string 
-    # 
-    # If registration successful 
-    #   show secret on admin browser
-    # else:
-    #   Show error
+# # * AdminWebApp implementation
+# # * 2 pages
 
-# TODO: Page 2: listing of registered gates
-    # show a table with gates info (id, location, secret, activations)
-    # ! Think about the possible errors
+# # TODO: Page 1: registration of a new gate
+#     # webpage with a form
+#     # Entries of the form
+#     #   gateID - unique identifier
+#     #   gateLocation - string 
+#     # 
+#     # If registration successful 
+#     #   show secret on admin browser
+#     # else:
+#     #   Show error
+
+# # TODO: Page 2: listing of registered gates
+#     # show a table with gates info (id, location, secret, activations)
+#     # ! Think about the possible errors
+
+
+if __name__ == "__main__":
+    app.run(host='0.0.0.0', port=8000, debug=True)
