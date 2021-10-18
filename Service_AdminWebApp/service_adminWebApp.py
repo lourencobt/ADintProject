@@ -23,7 +23,9 @@
 
     # ! Think about the possible errors
 
-
+# ! Don't Forget
+# !     Every time the application is executed a new code is generated and retrieved
+# !     Code becomes invalid after 1 minute of creation or when a new code is generated
 
 # * AdminWebApp implementation
 # * 2 pages
