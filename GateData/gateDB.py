@@ -49,15 +49,19 @@ def listGatesId():
     return [i.id for i in session.query(gates.id).all()]
 
 def newGate(id, secret, location):
+
+    # Verify if Id is an Integer >= 1
+    if id < 1:
+        return -1
     # Verify if there already a gate with id = id
     if id in listGatesId():
-        return -1
+        return -2
     # Verify if the secret has correct length. If not, this secret is not valid
     elif len(secret) != SECRET_LEN:
-        return -2
-    # Verify if location length >= 2. We assume that a location has at least 2 characters
-    elif len(location) < 2:
         return -3
+    # Verify if location length > 0.
+    elif len(location) < 1:
+        return -4
     else:
         gate = gates(id = id, secret = secret, location = location, activations = 0)
         session.add()
