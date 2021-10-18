@@ -62,5 +62,6 @@ def newGate(id, secret, location):
         gate = gates(id = id, secret = secret, location = location, activations = 0)
         session.add()
         session.commit()
-        
+        return 0
+
 
