@@ -10,8 +10,11 @@
 
 # Imports
 from flask import Flask, render_template, request, abort
+from flask import json
 from flask.json import jsonify
-import datetime 
+import datetime
+import requests
+from werkzeug.wrappers import response 
 
 SECRET_LEN = 4
 JoaoCode = {}
@@ -83,10 +86,63 @@ def verifyCode():
 #     # else:
 #     #   Show error
 
+
+@app.route("/admin/form")
+def completeForm():
+    return render_template("form.html")
+
+@app.route("/admin/success", methods = ['POST'])
+def wasSuccess():
+
+    if request.method != 'POST':
+        return render_template("400.html")
+
+    else:
+
+        result = request.form
+        data = jsonify(result)
+        aux = data.json
+        aux['id'] = int(aux['id'])
+        aux['secret'] = generate_code()
+        inJson = jsonify(aux)
+        
+        requ = requests.post( "http://194.210.133.121:8000/gates" , json=inJson.json)
+
+        if requ.status_code==200:
+            return render_template("200.html")
+        
+        else:
+            return render_template("400.html")
+
+
+
+
+
+
 # # TODO: Page 2: listing of registered gates
 #     # show a table with gates info (id, location, secret, activations)
 #     # ! Think about the possible errors
 
+@app.route("/admin/gates")
+def allGatesAvailable():
+# TODO: Request Code
+    
+    try:
+
+        infoRequest = requests.get("http://194.210.133.121:8000/gates")
+
+        print(infoRequest.json())
+
+    except:
+        # ! Should we do except to a especific exception?
+        print("Request wasn't successful.")
+        print("Exiting...")
+        exit(-1)
+
+    return render_template("allGates.html", gatesInfo = infoRequest.json())
+
+
+
 
 if __name__ == "__main__":
-    app.run(host='0.0.0.0', port=8000, debug=True)
+        app.run(host='0.0.0.0', port=8001, debug=True)
