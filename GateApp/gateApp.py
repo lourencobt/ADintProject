@@ -5,8 +5,11 @@
 
 import argparse
 from logging import error
+import requests
+import time
 
 SECRET_LEN = 4
+SERVICE = "http://172.30.213.161:8001"
 
 # Parsing arguments
 def secret(string):
@@ -21,26 +24,44 @@ args = parser.parse_args()
 
 gateDict = {"gateID": args.gateID[0], "gateSecret": args.gateSecret[0]}
 
-
 print("Contacting Server ...")
-# TODO: Send {gateID: __, gateSecret: __}  to the Server and wait for the response
 
-# TODO: verify if the server response is valid
-# if valid :
-#   print("The secret is valid for this gate")
-# else:
-#   print("The secret is not valid for this gate") 
-#   print("Exiting...")
-#   exit
+# Send {gateID: __, gateSecret: __}  to the Server and wait for the response
+# verify if the server response is valid
+try: 
+  r = requests.post(SERVICE+"/API/gate", json=gateDict)
+  if r.json()['valid'] :
+    print("The secret is valid for this gate")
+  else:
+    print("The secret is not valid for this gate") 
+    print("Exiting...")
+    exit(-1)
+except:
+  print("Couldn't connect to the server")
+  print("Exiting...")
+  exit(-2)
 
 while(1):
-    # TODO: read user code
-    # Type the user code : ______
+    # Read user code
+    userCode = input("Type the user code: ")
+    if userCode == 'q':
+        exit(0)
 
-    # TODO: Contact Server and receive if user inserted code is valid or not
-    # if valid :
-    #   print("!!! Code Valid !!!")
-    #   print("!!! The gate will close in 6 seconds")
-    #   sleep(6)
-    # else:
-    # print("!!! Code Not Valid !!!")
+    # Contact Server and receive if user inserted code is valid or not
+    try:
+      r = requests.post(SERVICE+"/API/code", json={"code":userCode, "gateID":gateDict["gateID"]})
+    except:
+      print("Couldn't connect to the server")
+      continue
+    try:
+      data = r.json()
+      if data['valid'] :
+        print("!!! Code Valid !!!")
+        print("!!! The gate will close in 6 seconds")
+        time.sleep(6)
+      else:
+          print("!!! Code Not Valid !!!")
+    except:
+      print("Bad server response")
+      continue
+

@@ -9,35 +9,25 @@ from gateDB import *
 
 app = Flask(__name__)
 
-# TODO: Endpoint 1: register new gate
-    # URL: /gates/gateID or /gates/ # ! URL's need to be revised
-    # ! Think about the possible errors
-
-# TODO: Endpoint 2: get list of registered gates
-    # URL: /gates/ -> # ! URL's need to be revised
-
-    # ! Think about the possible errors
-
-@app.route("/gates", methods=['GET', 'POST'])
+# GET   /API/gates -> Register new gate
+# POST  /API/gates -> List registered gates
+@app.route("/API/gates", methods=['GET', 'POST'])
 def gates():
     if request.method == 'POST': #With the Post come one json like {"id": 10, "secret":"9999", "location":"EA1"}
         #parse body
         body = request.json
 
-        # TODO: Verify if body is correct
         try:
             id = body['id']
             secret = body['secret']
             location = body['location']
-        except KeyError:
+        except:
             abort(400)
 
         # Register Gate
         if newGate(id, secret, location) == 0:
             return {"secret": secret}
         else:
-            # ! Confirm if this is the appropriate error. 400 Bad Request
-            # ! If the new data is in wrong format, should we inform the client??
             abort(400)
     elif request.method == 'GET':
         gates = listGates()
@@ -46,11 +36,26 @@ def gates():
             gatesList.append({"id":i.id, "secret":i.secret, "location":i.location, "activations":i.activations})
 
         return jsonify(gatesList)
-    else:
-        # Never occurs this case, because of methods declare on app.route. However this is the intended error if 
-        # for some reason the users enters this route with a wrong method
-        # ! Confirm if this is needed
-        abort(405)
+
+# POST /API/gates/<gateID>/secret -> verify if posted secret of gate with id ID is valid
+@app.route("/API/gates/<path:gateID>/secret", methods=['POST'])
+def validateSecret(gateID):
+    body = request.json
+    try:
+        #Verify there is such a code and if it is still valid
+        if secretOfGate(gateID) == body["secret"]:
+            return {"valid": True}
+        else: 
+            return {"valid": False}
+    except:
+        abort(400)
+
+# POST /API/gates/<gateID>/activation -> Increment Activation of gate with id ID
+# ! Verify if POST or PUT
+@app.route("/API/gates/<path:gateID>/activation", methods=['POST'])
+def changeActivation(gateID):
+    activationOfGate(gateID)
+    return {"success": True}
 
 if __name__ == "__main__":
     app.run(host='0.0.0.0', port=8000, debug=True)
