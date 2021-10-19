@@ -12,7 +12,9 @@
 from flask import Flask, render_template, request, abort
 from flask.json import jsonify
 import datetime 
+import requests
 
+GATEDATASERVICE = "http://172.30.213.161:8000"
 SECRET_LEN = 4
 JoaoCode = {}
 
@@ -34,11 +36,12 @@ def generate_code():
 
     return ''.join(secretList)
 
-# TODO: Endpoint 1: for the UserApp to retrieve a new user code
-    # URL: /UserApp/users/joao # ! URL's need to be revised
-    # ! Think about the possible errors
-@app.route("/users/joao")
-def getNewCode():
+# for the UserApp to retrieve a new user code
+@app.route("/API/users/<path:username>")
+def getNewCode(username):
+    if username != "joao":
+        abort(404)
+
     # Invalidate last code if still valid
     code = generate_code()
 
@@ -47,26 +50,40 @@ def getNewCode():
 
     return {"code": code}
 
-# TODO: Endpoint 2: for the Gate to verify if a code is valid
-    # URL: /GateApp/ -> # ! URL's need to be revised
-@app.route("/GateApp", methods=['POST'])
+# for the Gate to verify if a code is valid
+@app.route("/API/code", methods=['POST'])
 def verifyCode():
-    # ! verify if request in the appropriate format
     data = request.json
-    #Verify there is such a code and if it is still valid
-    if JoaoCode["code"] == data["code"]:
-        # Code becomes invalid after 1 minute of creation
-        if datetime.datetime.now() - JoaoCode["datetime"] > datetime.timedelta(minutes = 1):
-            return {"valid": False}
+    try:
+        #Verify there is such a code and if it is still valid
+        if JoaoCode["code"] == data["code"]:
+            # Code becomes invalid after 1 minute of creation
+            if datetime.datetime.now() - JoaoCode["datetime"] > datetime.timedelta(minutes = 1):
+                return {"valid": False}
+            else: 
+                # ! Check this. Post?? We don't send nothing to post neither to put
+                r = requests.post(GATEDATASERVICE+"/API/gates/{}/activation".format(data["gateID"]))
+                if r.json()["success"]:
+                    return {"valid": True}
+                else:
+                    abort(400)
         else: 
-            return {"valid": True}
-    else: 
-        return {"valid": False}
+            return {"valid": False}
+    except:
+        abort(400)
 
 
-# ! Don't Forget
-# !     Every time the application is executed a new code is generated and retrieved
-
+# for the validation of a Gate 
+@app.route("/API/gate", methods=['POST'])
+def validateGate():
+    data = request.json
+    try:
+        # Do request to the DB
+        r = requests.post(GATEDATASERVICE+"/API/gates/{}/secret".format(data["gateID"]), json={"secret": data["gateSecret"]})
+        # return validation
+        return r.text
+    except:
+        abort(400)
 
 # * AdminWebApp implementation
 # * 2 pages
@@ -88,4 +105,4 @@ def verifyCode():
 
 
 if __name__ == "__main__":
-    app.run(host='0.0.0.0', port=8000, debug=True)
+    app.run(host='0.0.0.0', port=8001, debug=True)

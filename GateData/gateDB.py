@@ -48,8 +48,15 @@ def listGates():
 def listGatesId():
     return [i.id for i in session.query(gates.id).all()]
 
-def newGate(id, secret, location):
+def secretOfGate(id):
+    return session.query(gates).filter(gates.id == id).first().secret
 
+def activationOfGate(id):
+    gateInfo = session.query(gates).filter(gates.id == id).first()
+    gateInfo.activations = gateInfo.activations+1
+    session.commit()
+
+def newGate(id, secret, location):
     # Verify if Id is an Integer >= 1
     if id < 1:
         return -1
