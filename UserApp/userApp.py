@@ -17,8 +17,8 @@ except:
 
 # Verify if Code was received and was valid
 if r.status_code == 200:
-    data = r.json()
     try:
+        data = r.json()
         print("Code received")
         print(">>> "+ data["code"] +" <<<")
         print("Please type the code in the Gate")

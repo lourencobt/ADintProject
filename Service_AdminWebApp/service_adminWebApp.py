@@ -21,6 +21,8 @@ JoaoCode = {}
 
 app = Flask(__name__)
 
+# ! Ask doubts about endpoints in the back page of Lourenço Assignment
+
 # * Service Endpoints implementation
 # * In this version, 2 endpoints
 
@@ -73,7 +75,6 @@ def verifyCode():
     except:
         abort(400)
 
-
 # for the validation of a Gate 
 @app.route("/API/gate", methods=['POST'])
 def validateGate():
@@ -86,57 +87,45 @@ def validateGate():
     except:
         abort(400)
         
-@app.route("/admin/form")
+# ! Ask teacher about "endpoints" web
+@app.route("/admin/createGate")
 def completeForm():
-    return render_template("form.html")
+    return render_template("createGate.html")
 
-@app.route("/admin/success", methods = ['POST'])
+@app.route("/admin/newGate", methods = ['POST'])
 def wasSuccess():
-
-    if request.method != 'POST':
-        return render_template("400.html")
-
-    else:
-
         result = request.form
-        data = jsonify(result)
-        aux = data.json
-        aux['id'] = int(aux['id'])
-        aux['secret'] = generate_code()
-        inJson = jsonify(aux)
+        try:
+            data = jsonify(result)
+            aux = data.json
+            aux['id'] = int(aux['id'])
+            aux['secret'] = generate_code()
+            dataJson = jsonify(aux)
+        except: 
+            abort(400)
         
-        requ = requests.post( "http://194.210.133.121:8000/gates" , json=inJson.json)
-
-        if requ.status_code==200:
-            return render_template("200.html")
+        try: 
+            r = requests.post(GATEDATASERVICE+ "/API/gates" , json=dataJson.json)
+        except: 
+            # ! Ask teacher about error in this case
+            abort(503)
         
-        else:
-            return render_template("400.html")
+        try:
+            return render_template("newGate.html", message = r.json()["secret"] )
+        except:
+            abort(400)
 
-# # TODO: Page 2: listing of registered gates
-#     # show a table with gates info (id, location, secret, activations)
-#     # ! Think about the possible errors
-
+#listing of registered gates
+# show a table with gates info (id, location, secret, activations)
 @app.route("/admin/gates")
 def allGatesAvailable():
-# TODO: Request Code
-    
     try:
-
-        infoRequest = requests.get("http://194.210.133.121:8000/gates")
-
-        print(infoRequest.json())
-
+        infoRequest = requests.get(GATEDATASERVICE+"/API/gates")
     except:
-        # ! Should we do except to a especific exception?
-        print("Request wasn't successful.")
-        print("Exiting...")
-        exit(-1)
+        # ! Ask teacher about error in this case
+        abort(503)
 
-    return render_template("allGates.html", gatesInfo = infoRequest.json())
-
-
-
+    return render_template("listGates.html", gatesInfo = infoRequest.json())
 
 if __name__ == "__main__":
     app.run(host='0.0.0.0', port=8001, debug=True)
