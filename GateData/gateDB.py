@@ -14,6 +14,7 @@ from sqlalchemy.ext.declarative import declarative_base
 from sqlalchemy import Column, Integer, String
 from sqlalchemy import create_engine
 from sqlalchemy.orm import sessionmaker
+from sqlalchemy.exc import IntegrityError
 
 SECRET_LEN = 4
 
@@ -52,25 +53,21 @@ def secretOfGate(id):
     return session.query(gates).filter(gates.id == id).first().secret
 
 def activationOfGate(id):
-    gateInfo = session.query(gates).filter(gates.id == id).first()
-    gateInfo.activations = gateInfo.activations+1
-    session.commit()
+        gateInfo = session.query(gates).filter(gates.id == id).first()
+        gateInfo.activations = gateInfo.activations+1
+        session.commit()
 
 def newGate(id, secret, location):
     # Verify if Id is an Integer >= 1
     if id < 1:
         return -1
-    # ! Change this
-    # Verify if there already a gate with id = id
-    if id in listGatesId():
-        return -2
     # Verify if the secret has correct length. If not, this secret is not valid
     elif len(secret) != SECRET_LEN:
-        return -3
+        return -2
     # Verify if location length > 0.
     elif len(location) < 1:
-        return -4
-    else:
+        return -3
+    else: 
         gate = gates(id = id, secret = secret, location = location, activations = 0)
         session.add(gate)
         session.commit()

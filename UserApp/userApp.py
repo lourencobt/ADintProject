@@ -4,12 +4,12 @@
 
 import requests
 
-SERVICE = "http://172.30.213.161:8001"
+SERVICE = "http://172.30.209.117:8001/"
 print("Contacting Server ...")
 
 # Request Code
 try: 
-    r = requests.get(SERVICE+"/API/users/joao")
+    r = requests.get(SERVICE+"/API/users/joao/code")
 except:
     print("Request wasn't successful.")
     print("Exiting...")

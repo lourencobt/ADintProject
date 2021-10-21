@@ -15,16 +15,9 @@ from flask.json import jsonify
 import datetime 
 import requests
 
-GATEDATASERVICE = "http://172.30.213.161:8000"
+GATEDATASERVICE = "http://172.30.209.117:8000/"
 SECRET_LEN = 4
 JoaoCode = {}
-
-app = Flask(__name__)
-
-# ! Ask doubts about endpoints in the back page of Lourenço Assignment
-
-# * Service Endpoints implementation
-# * In this version, 2 endpoints
 
 import random
 def generate_code():
@@ -39,8 +32,13 @@ def generate_code():
 
     return ''.join(secretList)
 
+
+app = Flask(__name__)
+
+# * Service Endpoints implementation
+
 # for the UserApp to retrieve a new user code
-@app.route("/API/users/<path:username>")
+@app.route("/API/users/<path:username>/code")
 def getNewCode(username):
     if username != "joao":
         abort(404)
@@ -54,8 +52,8 @@ def getNewCode(username):
     return {"code": code}
 
 # for the Gate to verify if a code is valid
-@app.route("/API/code", methods=['POST'])
-def verifyCode():
+@app.route("/API/gates/<path:gateID>/code", methods=['POST'])
+def verifyCode(gateID):
     data = request.json
     try:
         #Verify there is such a code and if it is still valid
@@ -64,7 +62,7 @@ def verifyCode():
             if datetime.datetime.now() - JoaoCode["datetime"] > datetime.timedelta(minutes = 1):
                 return {"valid": False}
             else: 
-                r = requests.post(GATEDATASERVICE+"/API/gates/{}/activation".format(data["gateID"]))
+                r = requests.post(GATEDATASERVICE+"/API/gates/{}/activation".format(gateID))
                 if r.json()["success"]:
                     return {"valid": True}
                 else:
@@ -86,6 +84,9 @@ def validateGate():
     except:
         abort(400)
         
+
+# * Admin Web App Endpoints implementation
+
 @app.route("/admin/createGate")
 def completeForm():
     return render_template("createGate.html")
@@ -100,18 +101,23 @@ def wasSuccess():
             aux['secret'] = generate_code()
             dataJson = jsonify(aux)
         except: 
-            abort(400)
+            return "Error: Inserted information not in the correct format."
         
         try: 
             r = requests.post(GATEDATASERVICE+ "/API/gates" , json=dataJson.json)
         except: 
-            # ! Ask teacher about error in this case
-            abort(503)
+            return "Server is down for the moment. Try again later."
         
         try:
-            return render_template("newGate.html", message = r.json()["secret"] )
-        except:
-            abort(400)
+            if r.status_code == 400:
+                return "Error: Inserted information not in the correct format."
+            elif r.json()["inserted"]:
+                return render_template("newGate.html", message = r.json()["secret"] )
+            else:
+                return "Error: There are already one gate with that ID."
+        except: 
+            return "Error: Something went wrong in Server Response"
+        
 
 #listing of registered gates
 # show a table with gates info (id, location, secret, activations)
@@ -120,8 +126,8 @@ def allGatesAvailable():
     try:
         infoRequest = requests.get(GATEDATASERVICE+"/API/gates")
     except:
-        # ! Ask teacher about error in this case
-        abort(503)
+        # ! Ask teacher if this is sufficient
+        return "Server is down for the moment. Try again later."
 
     return render_template("listGates.html", gatesInfo = infoRequest.json())
 

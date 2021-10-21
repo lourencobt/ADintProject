@@ -9,7 +9,7 @@ import requests
 import time
 
 SECRET_LEN = 4
-SERVICE = "http://172.30.213.161:8001"
+SERVICE = "http://172.30.209.117:8001/"
 
 # Parsing arguments
 def secret(string):
@@ -49,7 +49,7 @@ while(1):
 
     # Contact Server and receive if user inserted code is valid or not
     try:
-      r = requests.post(SERVICE+"/API/code", json={"code":userCode, "gateID":gateDict["gateID"]})
+      r = requests.post(SERVICE+"/API/gates/{}/code".format(gateDict["gateID"]), json={"code":userCode})
     except:
       print("Couldn't connect to the server")
       continue
