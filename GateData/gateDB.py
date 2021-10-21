@@ -60,6 +60,7 @@ def newGate(id, secret, location):
     # Verify if Id is an Integer >= 1
     if id < 1:
         return -1
+    # ! Change this
     # Verify if there already a gate with id = id
     if id in listGatesId():
         return -2

@@ -51,7 +51,6 @@ def validateSecret(gateID):
         abort(400)
 
 # POST /API/gates/<gateID>/activation -> Increment Activation of gate with id ID
-# ! Verify if POST or PUT
 @app.route("/API/gates/<path:gateID>/activation", methods=['POST'])
 def changeActivation(gateID):
     activationOfGate(gateID)

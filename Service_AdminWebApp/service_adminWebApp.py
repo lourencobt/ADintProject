@@ -64,7 +64,6 @@ def verifyCode():
             if datetime.datetime.now() - JoaoCode["datetime"] > datetime.timedelta(minutes = 1):
                 return {"valid": False}
             else: 
-                # ! Check this. Post?? We don't send nothing to post neither to put
                 r = requests.post(GATEDATASERVICE+"/API/gates/{}/activation".format(data["gateID"]))
                 if r.json()["success"]:
                     return {"valid": True}
@@ -87,7 +86,6 @@ def validateGate():
     except:
         abort(400)
         
-# ! Ask teacher about "endpoints" web
 @app.route("/admin/createGate")
 def completeForm():
     return render_template("createGate.html")
