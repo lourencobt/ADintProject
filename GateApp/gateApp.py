@@ -30,24 +30,39 @@ print("Contacting Server ...")
 # verify if the server response is valid
 try: 
   r = requests.post(SERVICE+"/API/gate", json=gateDict)
+except:
+  print("Couldn't connect to the server. Try again later or contact the admin")
+  print("Exiting...")
+  exit(-1)
+
+if r.status_code == 200:
+  try:
+    error = r.json()["error"]
+  except:
+    print("Invalid Server Response. Server not working for the moment. Try again later or contact the admin")
+    print("Exiting...")
+    exit(-2)
   
-  if r.status_code == 200:
-    if r.json()['valid'] :
-      print("The secret is valid for this gate")
+  if error == 0:
+    try:
+      valid = r.json()['valid']
+    except:
+      print("Invalid Server Response. Server not working for the moment. Try again later or contact the admin")
+      print("Exiting...")
+      exit(-3)
+
+    if valid :
+        print("The secret is valid for this gate")
     else:
       print("The secret is not valid for this gate") 
       print("Exiting...")
-      raise SystemExit
-  else:
-    print("Invalid Server Response. Server not working for the moment. Try again later.")
-    print("Exiting...")
-    raise SystemExit
-except SystemExit:
-  exit(-1)
-except:
-  print("Couldn't connect to the server")
+      exit(-4)
+  elif error > 0: 
+    print("Invalid Server Response. Server not working for the moment. Try again later or contact the admin [ERROR CODE {}]".format(error))
+else:
+  print("Bad Request. Contact the admin.")
   print("Exiting...")
-  exit(-2)
+  exit(-5)
 
 while(1):
     # Read user code
@@ -57,23 +72,37 @@ while(1):
 
     # Contact Server and receive if user inserted code is valid or not
     try:
-      r = requests.post(SERVICE+"/API/gates/{}/code".format(gateDict["gateID"]), json={"code":userCode})
+      r = requests.post(SERVICE+"/API/gates/{}/code".format(gateDict["gateID"]), json={"code":userCode, "secret":gateDict["gateSecret"]})
     except:
-      print("Couldn't connect to the server")
-      continue
+      print("Couldn't connect to the server. Try again later or contact the admin")
+      print("Exiting...")
+      exit(-6)
       
     if r.status_code == 200:
       try:
-        data = r.json()
-        if data['valid'] :
+        error = r.json()["error"]
+      except:
+        print("Invalid Server Response. Server not working for the moment. Try again later or contact the admin")
+        continue
+      
+      if error == 0:
+        try:
+          valid = r.json()['valid']
+        except:
+          print("Invalid Server Response. Server not working for the moment. Try again later or contact the admin")
+          continue
+        
+        if valid:
           print("!!! Code Valid !!!")
           print("!!! The gate will close in 6 seconds")
           time.sleep(6)
         else:
-            print("!!! Code Not Valid !!!")
-      except:
-        print("Bad server response")
-        continue
+          print("!!! Code Not Valid !!!")
+      elif error > 0:
+        print("Invalid Server Response. Server not working for the moment. Try again later or contact the admin [ERROR CODE {}]".format(error))
     else:
-      print("Invalid Server Response. Server not working for the moment. Try again later.")
+      print("Invalid Server Response. Server not working for the moment. Try again later or contact the admin")  
+          
+      
+
 

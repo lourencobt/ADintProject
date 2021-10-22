@@ -1,4 +1,4 @@
-#%%
+
 # * Implement database that will store every gate information
 # Tablename = Gates
 # Columns:
@@ -15,6 +15,7 @@ from sqlalchemy import Column, Integer, String
 from sqlalchemy import create_engine
 from sqlalchemy.orm import sessionmaker
 from sqlalchemy.exc import IntegrityError
+from sqlalchemy.sql.expression import except_
 
 SECRET_LEN = 4
 
@@ -42,7 +43,6 @@ Session = sessionmaker(bind=engine)
 session = Session() 
 Base.metadata.create_all(engine)
 
-#%%
 def listGates():
     return session.query(gates).all()
 
@@ -50,14 +50,29 @@ def listGatesId():
     return [i.id for i in session.query(gates.id).all()]
 
 def secretOfGate(id):
-    return session.query(gates).filter(gates.id == id).first().secret
+    try: 
+        return session.query(gates).filter(gates.id == id).first().secret
+    except:
+        return -1
 
 def activationOfGate(id):
+    try:
         gateInfo = session.query(gates).filter(gates.id == id).first()
         gateInfo.activations = gateInfo.activations+1
+    except:
+        return -1
+    
+    try:
         session.commit()
+    except:
+        return -2
+        
+    return 0
+
+        
 
 def newGate(id, secret, location):
+    # Verify if the type of the arguments is correct
     if type(id) != int or type(location) != str or type(secret) != str:
         return -1
     # Verify if Id is an Integer >= 1
@@ -72,7 +87,12 @@ def newGate(id, secret, location):
     else: 
         gate = gates(id = id, secret = secret, location = location, activations = 0)
         session.add(gate)
-        session.commit()
+        try:
+            session.commit()
+        except:
+            session.rollback()
+            return -5
+
         return 0
 
 

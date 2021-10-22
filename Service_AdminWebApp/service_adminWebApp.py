@@ -8,12 +8,25 @@
 # *         composed by two web pages, one for "Registration of a new gate" 
 # *         and the other for "Listing registered gates"
 
+## Errors
+# 0 → No error
+# 1 → Arguments to create a new gate are not in the correct format
+# 2 → ID must be a positive integer.
+# 3 → Secret has not the correct secret length.
+# 4 → Location has to have a length bigger than 0.
+# 5 → There is already a gate with this ID.
+# 6 → That is not a valid GateID
+# 7 → Couldn't reach GateDataService
+# 8 → Incorrect GateDataService response
+# 9 → Authentication of the Gate Failed
+
 # Imports
 from flask import Flask, render_template, request, abort
 from flask import json
 from flask.json import jsonify
 import datetime 
 import requests
+from sqlalchemy import exc
 
 GATEDATASERVICE = "http://localhost:8000/"
 SECRET_LEN = 4
@@ -32,6 +45,9 @@ def generate_code():
 
     return ''.join(secretList)
 
+def raise_error(errorNumber, errorDescription):
+    return {"error": errorNumber, "errorDescription":errorDescription}
+
 
 app = Flask(__name__)
 
@@ -49,39 +65,64 @@ def getNewCode(username):
     JoaoCode['code'] = code
     JoaoCode['datetime'] = datetime.datetime.now()
 
-    return {"code": code}
+    return {
+        "code": code, 
+        "error": 0
+    }
 
 # for the Gate to verify if a code is valid
 @app.route("/API/gates/<path:gateID>/code", methods=['POST'])
 def verifyCode(gateID):
     data = request.json
     try:
-        requested_code = data["code"]
+        gateSecret = data["secret"]
+        inserted_code = data["code"]
     except:
         abort(400)
 
     # Verify there is such a code and if it is still valid
-    if JoaoCode["code"] == requested_code:
+    if JoaoCode["code"] == inserted_code:
         # Code becomes invalid after 1 minute of creation
         if datetime.datetime.now() - JoaoCode["datetime"] > datetime.timedelta(minutes = 1):
-            return {"valid": False}
+            return {
+                "valid": False, 
+                "error": 0
+            }
         else: 
             try:
-                r = requests.post(GATEDATASERVICE+"/API/gates/{}/activation".format(gateID))
+                r = requests.post(GATEDATASERVICE+"/API/gates/{}/activation".format(gateID), json={"secret": gateSecret} )
             except:
-                # ! What to do when we cant contact the server? it is not a bad request
-                abort(400)
+                return raise_error(7, "Couldn't Reach GateDataService")
             if r.status_code == 200:
-                # ! verify error for example keyerror
-                if r.json()["success"]:
-                    return {"valid": True}
-                else:
-                    return {"valid": False}
+                try:
+                    error = r.json()["error"]
+                except:
+                    return raise_error(8, "Incorrect GateDataService response")
+
+                if error == 0:
+                    try:
+                        success = r.json()["success"]
+                    except:
+                        return raise_error(8, "Incorrect GateDataService response")
+                    
+                    return {
+                        "valid": success, 
+                        "error": 0
+                    }
+                elif error > 0:
+                    try:
+                        errorDescription = r.json()["errorDescription"]
+                    except:
+                        return raise_error(8, "Incorrect GateDataService response")
+            
+                    return raise_error(error, errorDescription)
             else:
-                    # ! What to do when we cant contact the server? it is not a bad request
-                abort(400)
-    else: 
-        return {"valid": False}
+                abort(r.status_code)
+    else:
+        return {
+                "valid": False, 
+                "error": 0
+            }
 
 # for the validation of a Gate 
 @app.route("/API/gate", methods=['POST'])
@@ -97,17 +138,34 @@ def validateGate():
     try:
         r = requests.post(GATEDATASERVICE+"/API/gates/{}/secret".format(gateID), json={"secret": gateSecret})
     except:
-        # ! WHAT to do
-        abort(400)
-    
+        return raise_error(7, "Couldn't Reach GateDataService")
+
     if r.status_code == 200:
-        # return validation
-        return r.text
-    # else:
-    #     # !error
-
+        try:
+            error = r.json()["error"]
+        except:
+            return raise_error(8, "Incorrect GateDataService response")
         
-
+        if error == 0:
+            try:
+                valid = r.json()["valid"]
+            except:
+                return raise_error(8, "Incorrect GateDataService response")
+            # return validation
+            return {
+                "valid": valid, 
+                "error": 0
+            }
+        elif error > 0:
+            try:
+                errorDescription = r.json()["errorDescription"]
+            except:
+                return raise_error(8, "Incorrect GateDataService response")
+            
+            return raise_error(error, errorDescription)
+    else:
+        abort(r.status_code)
+        
 # * Admin Web App Endpoints implementation
 
 @app.route("/admin/createGate")
@@ -131,32 +189,53 @@ def wasSuccess():
         except: 
             return "Server is down for the moment. Try again later."
         
-        try:
-            if r.status_code == 200:
-                if r.json()["inserted"]:
-                    return render_template("newGate.html", message = r.json()["secret"] )
-                else:
-                    return "Error: There are already one gate with that ID."
-            elif r.status_code == 400:
-                return "Error: Inserted information not in the correct format."
-            else:
-                return "Error: Server not working correctly. Contact Admin"
+        if r.status_code == 200:
+            try:
+                error = r.json()["error"]
+            except:
+                return "Error: Something went wrong in Server Response"
             
-        except: 
-            return "Error: Something went wrong in Server Response"
+            if error == 0:
+                try:
+                    secret = r.json()["secret"]
+                except:
+                    return "Error: Something went wrong in Server Response"
+                
+                return render_template("newGate.html", message = secret )
+            elif error > 0:
+                try:
+                    errorDescription = r.json()["errorDescription"]
+                except:
+                    return "Error: Something went wrong in Server Response"
+                
+                return "Error: " + errorDescription
+        elif r.status_code == 400:
+            return "Error: Inserted information not in the correct format"
+        else:
+            return "Error: Server not working correctly. Contact Admin"
         
-
 #listing of registered gates
 # show a table with gates info (id, location, secret, activations)
 @app.route("/admin/gates")
 def allGatesAvailable():
     try:
-        infoRequest = requests.get(GATEDATASERVICE+"/API/gates")
+        r = requests.get(GATEDATASERVICE+"/API/gates")
     except:
         return "Server is down for the moment. Try again later."
 
-    if infoRequest.status_code == 200:
-        return render_template("listGates.html", gatesInfo = infoRequest.json())
+    if r.status_code == 200:
+        try:
+            error = r.json()["error"]
+        except:
+            return "Error: Something went wrong in Server Response"
+        
+        if error == 0:
+            try:
+                gatesList = r.json()["gatesList"]
+            except:
+                return "Error: Something went wrong in Server Response"
+
+            return render_template("listGates.html", gatesInfo = gatesList)
     else:
         return "Error: Server not working correctly. Contact Admin"
 

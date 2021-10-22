@@ -18,15 +18,27 @@ except:
 # Verify if Code was received and was valid
 if r.status_code == 200:
     try:
-        data = r.json()
-        print("Code received")
-        print(">>> "+ data["code"] +" <<<")
-        print("Please type the code in the Gate")
+        error = r.json()["error"]
     except:
-        print("Request wasn't successful.")
+        print("Invalid Server Response. Server not working for the moment. Try again later or contact the admin")
         print("Exiting...")
         exit(-2)
+    if error == 0:
+        try: 
+            code = r.json()["code"]
+        except:
+            print("Invalid Server Response. Server not working for the moment. Try again later or contact the admin")
+            print("Exiting...")
+            exit(-3)
+        
+        print("Code received")
+        print(">>> "+ code +" <<<")
+        print("Please type the code in the Gate")
+    elif error > 0:
+        print("Invalid Server Response. Server not working for the moment. Try again later or contact the admin [ERROR CODE {}]".format(error))
+        print("Exiting...")
+        exit(-4)
 else:
     print("Request wasn't successful.")
     print("Exiting...")
-    exit(-3)
+    exit(-5)
