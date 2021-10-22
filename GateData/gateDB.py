@@ -58,15 +58,17 @@ def activationOfGate(id):
         session.commit()
 
 def newGate(id, secret, location):
-    # Verify if Id is an Integer >= 1
-    if id < 1:
+    if type(id) != int or type(location) != str or type(secret) != str:
         return -1
+    # Verify if Id is an Integer >= 1
+    elif id < 1:
+        return -2
     # Verify if the secret has correct length. If not, this secret is not valid
     elif len(secret) != SECRET_LEN:
-        return -2
+        return -3
     # Verify if location length > 0.
     elif len(location) < 1:
-        return -3
+        return -4
     else: 
         gate = gates(id = id, secret = secret, location = location, activations = 0)
         session.add(gate)
