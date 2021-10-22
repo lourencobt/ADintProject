@@ -4,14 +4,14 @@
 
 import requests
 
-SERVICE = "http://172.30.209.117:8001/"
+SERVICE = "http://localhost:8001/"
 print("Contacting Server ...")
 
 # Request Code
 try: 
     r = requests.get(SERVICE+"/API/users/joao/code")
 except:
-    print("Request wasn't successful.")
+    print("Couldn't connect to the server")
     print("Exiting...")
     exit(-1)
 

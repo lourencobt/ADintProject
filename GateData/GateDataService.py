@@ -47,13 +47,18 @@ def gates():
 def validateSecret(gateID):
     body = request.json
     try:
-        #Verify there is such a code and if it is still valid
-        if secretOfGate(gateID) == body["secret"]:
+        secret = body["secret"]
+    except:
+        abort(400)
+
+    #Verify there is such a code and if it is still valid
+    try:
+        if secretOfGate(gateID) == secret:
             return {"valid": True}
         else: 
             return {"valid": False}
-    except:
-        abort(400)
+    except AttributeError:
+        abort(404)
 
 # POST /API/gates/<gateID>/activation -> Increment Activation of gate with id ID
 @app.route("/API/gates/<path:gateID>/activation", methods=['POST'])
@@ -61,6 +66,8 @@ def changeActivation(gateID):
     # ! Need to prove that we know the gate secret
     try: 
         activationOfGate(gateID)
+    except AttributeError:
+        abort(404)
     except:
         return {"success": False}
     return {"success": True}

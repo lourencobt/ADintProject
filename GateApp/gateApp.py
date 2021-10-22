@@ -9,7 +9,7 @@ import requests
 import time
 
 SECRET_LEN = 4
-SERVICE = "http://172.30.209.117:8001/"
+SERVICE = "http://localhost:8001/"
 
 # Parsing arguments
 def secret(string):
@@ -30,12 +30,20 @@ print("Contacting Server ...")
 # verify if the server response is valid
 try: 
   r = requests.post(SERVICE+"/API/gate", json=gateDict)
-  if r.json()['valid'] :
-    print("The secret is valid for this gate")
+  
+  if r.status_code == 200:
+    if r.json()['valid'] :
+      print("The secret is valid for this gate")
+    else:
+      print("The secret is not valid for this gate") 
+      print("Exiting...")
+      raise SystemExit
   else:
-    print("The secret is not valid for this gate") 
+    print("Invalid Server Response. Server not working for the moment. Try again later.")
     print("Exiting...")
-    exit(-1)
+    raise SystemExit
+except SystemExit:
+  exit(-1)
 except:
   print("Couldn't connect to the server")
   print("Exiting...")
@@ -53,15 +61,19 @@ while(1):
     except:
       print("Couldn't connect to the server")
       continue
-    try:
-      data = r.json()
-      if data['valid'] :
-        print("!!! Code Valid !!!")
-        print("!!! The gate will close in 6 seconds")
-        time.sleep(6)
-      else:
-          print("!!! Code Not Valid !!!")
-    except:
-      print("Bad server response")
-      continue
+      
+    if r.status_code == 200:
+      try:
+        data = r.json()
+        if data['valid'] :
+          print("!!! Code Valid !!!")
+          print("!!! The gate will close in 6 seconds")
+          time.sleep(6)
+        else:
+            print("!!! Code Not Valid !!!")
+      except:
+        print("Bad server response")
+        continue
+    else:
+      print("Invalid Server Response. Server not working for the moment. Try again later.")
 

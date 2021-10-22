@@ -15,9 +15,9 @@ from flask.json import jsonify
 import datetime 
 import requests
 
-GATEDATASERVICE = "http://172.30.209.117:8000/"
+GATEDATASERVICE = "http://localhost:8000/"
 SECRET_LEN = 4
-JoaoCode = {}
+JoaoCode = {"code": "0"}
 
 import random
 def generate_code():
@@ -56,33 +56,56 @@ def getNewCode(username):
 def verifyCode(gateID):
     data = request.json
     try:
-        #Verify there is such a code and if it is still valid
-        if JoaoCode["code"] == data["code"]:
-            # Code becomes invalid after 1 minute of creation
-            if datetime.datetime.now() - JoaoCode["datetime"] > datetime.timedelta(minutes = 1):
-                return {"valid": False}
-            else: 
+        requested_code = data["code"]
+    except:
+        abort(400)
+
+    # Verify there is such a code and if it is still valid
+    if JoaoCode["code"] == requested_code:
+        # Code becomes invalid after 1 minute of creation
+        if datetime.datetime.now() - JoaoCode["datetime"] > datetime.timedelta(minutes = 1):
+            return {"valid": False}
+        else: 
+            try:
                 r = requests.post(GATEDATASERVICE+"/API/gates/{}/activation".format(gateID))
+            except:
+                # ! What to do when we cant contact the server? it is not a bad request
+                abort(400)
+            if r.status_code == 200:
+                # ! verify error for example keyerror
                 if r.json()["success"]:
                     return {"valid": True}
                 else:
-                    abort(400)
-        else: 
-            return {"valid": False}
-    except:
-        abort(400)
+                    return {"valid": False}
+            else:
+                    # ! What to do when we cant contact the server? it is not a bad request
+                abort(400)
+    else: 
+        return {"valid": False}
 
 # for the validation of a Gate 
 @app.route("/API/gate", methods=['POST'])
 def validateGate():
     data = request.json
     try:
-        # Do request to the DB
-        r = requests.post(GATEDATASERVICE+"/API/gates/{}/secret".format(data["gateID"]), json={"secret": data["gateSecret"]})
-        # return validation
-        return r.text
+        gateID = data["gateID"]
+        gateSecret = data["gateSecret"]
     except:
         abort(400)
+
+    # Do request to the DB
+    try:
+        r = requests.post(GATEDATASERVICE+"/API/gates/{}/secret".format(gateID), json={"secret": gateSecret})
+    except:
+        # ! WHAT to do
+        abort(400)
+    
+    if r.status_code == 200:
+        # return validation
+        return r.text
+    # else:
+    #     # !error
+
         
 
 # * Admin Web App Endpoints implementation
@@ -109,12 +132,16 @@ def wasSuccess():
             return "Server is down for the moment. Try again later."
         
         try:
-            if r.status_code == 400:
+            if r.status_code == 200:
+                if r.json()["inserted"]:
+                    return render_template("newGate.html", message = r.json()["secret"] )
+                else:
+                    return "Error: There are already one gate with that ID."
+            elif r.status_code == 400:
                 return "Error: Inserted information not in the correct format."
-            elif r.json()["inserted"]:
-                return render_template("newGate.html", message = r.json()["secret"] )
             else:
-                return "Error: There are already one gate with that ID."
+                return "Error: Server not working correctly. Contact Admin"
+            
         except: 
             return "Error: Something went wrong in Server Response"
         
@@ -126,10 +153,12 @@ def allGatesAvailable():
     try:
         infoRequest = requests.get(GATEDATASERVICE+"/API/gates")
     except:
-        # ! Ask teacher if this is sufficient
         return "Server is down for the moment. Try again later."
 
-    return render_template("listGates.html", gatesInfo = infoRequest.json())
+    if infoRequest.status_code == 200:
+        return render_template("listGates.html", gatesInfo = infoRequest.json())
+    else:
+        return "Error: Server not working correctly. Contact Admin"
 
 if __name__ == "__main__":
     app.run(host='0.0.0.0', port=8001, debug=True)
