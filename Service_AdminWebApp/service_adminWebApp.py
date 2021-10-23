@@ -93,6 +93,7 @@ def verifyCode(gateID):
                 r = requests.post(GATEDATASERVICE+"/API/gates/{}/activation".format(gateID), json={"secret": gateSecret} )
             except:
                 return raise_error(7, "Couldn't Reach GateDataService")
+
             if r.status_code == 200:
                 try:
                     error = r.json()["error"]
@@ -165,7 +166,9 @@ def validateGate():
             return raise_error(error, errorDescription)
     else:
         abort(r.status_code)
-        
+
+
+   
 # * Admin Web App Endpoints implementation
 
 @app.route("/admin/createGate")
@@ -236,6 +239,13 @@ def allGatesAvailable():
                 return "Error: Something went wrong in Server Response"
 
             return render_template("listGates.html", gatesInfo = gatesList)
+        elif error > 0:
+            try:
+                errorDescription = r.json()["errorDescription"]
+            except:
+                return "Error: Something went wrong in Server Response"
+            
+            return "Error: " + errorDescription
     else:
         return "Error: Server not working correctly. Contact Admin"
 

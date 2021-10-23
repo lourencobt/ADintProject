@@ -127,6 +127,8 @@ def changeActivation(gateID):
                 return raise_error(8, "Incorrect GateDataService response")
             
             return raise_error(error, errorDescription)
+    else: 
+        abort(400)
     
     if valid:
         #if authentication successful, activate gate

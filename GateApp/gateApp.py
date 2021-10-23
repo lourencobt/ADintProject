@@ -57,7 +57,7 @@ if r.status_code == 200:
       print("The secret is not valid for this gate") 
       print("Exiting...")
       exit(-4)
-  elif error > 0: 
+  else: 
     print("Invalid Server Response. Server not working for the moment. Try again later or contact the admin [ERROR CODE {}]".format(error))
 else:
   print("Bad Request. Contact the admin.")
@@ -98,7 +98,7 @@ while(1):
           time.sleep(6)
         else:
           print("!!! Code Not Valid !!!")
-      elif error > 0:
+      else:
         print("Invalid Server Response. Server not working for the moment. Try again later or contact the admin [ERROR CODE {}]".format(error))
     else:
       print("Invalid Server Response. Server not working for the moment. Try again later or contact the admin")  
