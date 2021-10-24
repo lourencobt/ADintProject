@@ -57,12 +57,16 @@ if r.status_code == 200:
       print("The secret is not valid for this gate") 
       print("Exiting...")
       exit(-4)
+  elif error == 6:
+    print("That is not a valid gateID.")
+    exit(-5)
   else: 
     print("Invalid Server Response. Server not working for the moment. Try again later or contact the admin [ERROR CODE {}]".format(error))
+    exit(-5)
 else:
   print("Bad Request. Contact the admin.")
   print("Exiting...")
-  exit(-5)
+  exit(-6)
 
 while(1):
     # Read user code
@@ -76,7 +80,7 @@ while(1):
     except:
       print("Couldn't connect to the server. Try again later or contact the admin")
       print("Exiting...")
-      exit(-6)
+      exit(-7)
       
     if r.status_code == 200:
       try:
