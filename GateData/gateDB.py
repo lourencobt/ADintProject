@@ -1,11 +1,15 @@
 
-# * Implement database that will store every gate information
+# * Implement database that will store every gate information and history of all gates accesses
 # Tablename = Gates
 # Columns:
 #   - id - Integer - Primary Key
 #   - location - String
 #   - secret - String - It can be a String with 4 random characters
-#   - activations - Integer -> Number of gate opens
+
+# Tablename = accessHistory ??
+# Columns:
+#   - id - Integer - Primary Key
+#   - success - String
 
 import os
 
