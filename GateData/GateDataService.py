@@ -64,7 +64,7 @@ def gates():
         gates = listGates()
         gatesList = []
         for i in gates:
-            gatesList.append({"id":i.id, "secret":i.secret, "location":i.location, "activations":i.activations})
+            gatesList.append({"id":i.id, "secret":i.secret, "location":i.location})
 
         return {
             "gatesList": gatesList,
@@ -93,56 +93,6 @@ def validateSecret(gateID):
             "valid": False,
             "error":0
         }
-
-# POST /API/gates/<gateID>/activation -> Increment Activation of gate with id ID
-@app.route("/API/gates/<path:gateID>/activation", methods=['POST'])
-def changeActivation(gateID):
-    body = request.json
-    try:
-        gateSecret = body["secret"]
-    except:
-        abort(400)
-
-    # Authentication of the gate
-    try:
-        r = requests.post(GATEDATASERVICE+"/API/gates/{}/secret".format(gateID), json={"secret": gateSecret})
-    except:
-        return raise_error(7, "Couldn't Reach GateDataService")
-
-    if r.status_code == 200:
-        try:
-            error = r.json()["error"]
-        except:
-            return raise_error(8, "Incorrect GateDataService response")
-        
-        if error == 0:
-            try:
-                valid = r.json()["valid"]
-            except:
-                return raise_error(8, "Incorrect GateDataService response")
-        elif error > 0:
-            try:
-                errorDescription = r.json()["errorDescription"]
-            except:
-                return raise_error(8, "Incorrect GateDataService response")
-            
-            return raise_error(error, errorDescription)
-    else: 
-        abort(400)
-    
-    if valid:
-        #if authentication successful, activate gate
-        if (error := activationOfGate(gateID)) == 0:
-            return {
-                "success": True,
-                "error": 0
-            }
-        elif error == -1:
-            return raise_error(6, "That is not a valid GateID")
-        elif error == -2:
-            return raise_error(100, "Something went wrong")
-    else:
-        return raise_error(9, "Authentication of the Gate failed")
 
 if __name__ == "__main__":
     app.run(host='0.0.0.0', port=8000, debug=True)

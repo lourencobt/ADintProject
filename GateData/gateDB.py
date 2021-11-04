@@ -34,9 +34,8 @@ class gates(Base):
     id = Column(Integer, primary_key=True)
     secret = Column(String)
     location = Column(String)
-    activations = Column(Integer)
     def __repr__(self):
-        return "<Gates(id = %d, secret = %s, location = %s, activations = %d)>" % (self.id, self.secret, self.location, self.activations)
+        return "<Gates(id = %d, secret = %s, location = %s)>" % (self.id, self.secret, self.location)
     
 engine = create_engine('sqlite:///%s'%(DATABASE_FILE), echo=False, connect_args={"check_same_thread": False}) #echo = True shows all SQL calls
 Session = sessionmaker(bind=engine)
@@ -55,22 +54,6 @@ def secretOfGate(id):
     except:
         return -1
 
-def activationOfGate(id):
-    try:
-        gateInfo = session.query(gates).filter(gates.id == id).first()
-        gateInfo.activations = gateInfo.activations+1
-    except:
-        return -1
-    
-    try:
-        session.commit()
-    except:
-        return -2
-        
-    return 0
-
-        
-
 def newGate(id, secret, location):
     # Verify if the type of the arguments is correct
     if type(id) != int or type(location) != str or type(secret) != str:
@@ -85,7 +68,7 @@ def newGate(id, secret, location):
     elif len(location) < 1:
         return -4
     else: 
-        gate = gates(id = id, secret = secret, location = location, activations = 0)
+        gate = gates(id = id, secret = secret, location = location)
         session.add(gate)
         try:
             session.commit()
