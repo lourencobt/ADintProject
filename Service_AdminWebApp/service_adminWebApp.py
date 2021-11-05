@@ -22,7 +22,7 @@
 #10 → Data sent in request was not valid to insert in database
 
 # Imports
-from flask import Flask, render_template, request, abort
+from flask import Flask, render_template, request, abort, redirect
 from flask import json
 from flask.json import jsonify
 import datetime 
@@ -31,7 +31,6 @@ from sqlalchemy import exc
 
 GATEDATASERVICE = "http://localhost:8000/"
 SECRET_LEN = 4
-JoaoCode = {"code": "0"}
 
 import random
 def generate_code():
@@ -51,6 +50,62 @@ def raise_error(errorNumber, errorDescription):
 
 
 app = Flask(__name__)
+
+# * User Web App Endpoints implementation
+# WEB
+
+
+# * Gate Web App + Service Endpoints implementation
+# WEB
+@app.route("/gateApp/WEB/", methods=["GET", "POST"])
+def gateApp():
+    if request.method == "GET":
+        return render_template("authenticateGate.html", secret_len = SECRET_LEN)
+    elif request.method == "POST":
+        data = request.form
+        try:
+            gateID = data["gateID"]
+            gateSecret = data["secret"]
+        except:
+            abort(400)
+
+    # Do request to the DB
+    try:
+        r = requests.post(GATEDATASERVICE+"/API/gates/{}/secret".format(gateID), json={"secret": gateSecret})
+    except:
+        return "Server is down for the moment. Try again later."
+
+    if r.status_code == 200:
+        try:
+            error = r.json()["error"]
+        except:
+            return "Error: Something went wrong in Server Response"
+        
+        if error == 0:
+            try:
+                valid = r.json()["valid"]
+            except:
+                return "Error: Something went wrong in Server Response"
+
+            return render_template("scanner.html")
+        
+        elif error > 0:
+            try:
+                errorDescription = r.json()["errorDescription"]
+            except:
+                return "Error: Something went wrong in Server Response"
+            
+            return "Error: " + errorDescription
+    else:
+        abort(r.status_code)
+
+# API
+
+# * Admin Web App Endpoints implementation
+
+
+
+# Intermediary Version
 
 # * Service Endpoints implementation
 
@@ -125,49 +180,6 @@ def verifyCode(gateID):
                 "valid": False, 
                 "error": 0
             }
-
-# for the validation of a Gate 
-@app.route("/API/gate", methods=['POST'])
-def validateGate():
-    data = request.json
-    try:
-        gateID = data["gateID"]
-        gateSecret = data["gateSecret"]
-    except:
-        abort(400)
-
-    # Do request to the DB
-    try:
-        r = requests.post(GATEDATASERVICE+"/API/gates/{}/secret".format(gateID), json={"secret": gateSecret})
-    except:
-        return raise_error(7, "Couldn't Reach GateDataService")
-
-    if r.status_code == 200:
-        try:
-            error = r.json()["error"]
-        except:
-            return raise_error(8, "Incorrect GateDataService response")
-        
-        if error == 0:
-            try:
-                valid = r.json()["valid"]
-            except:
-                return raise_error(8, "Incorrect GateDataService response")
-            # return validation
-            return {
-                "valid": valid, 
-                "error": 0
-            }
-        elif error > 0:
-            try:
-                errorDescription = r.json()["errorDescription"]
-            except:
-                return raise_error(8, "Incorrect GateDataService response")
-            
-            return raise_error(error, errorDescription)
-    else:
-        abort(r.status_code)
-
 
    
 # * Admin Web App Endpoints implementation
