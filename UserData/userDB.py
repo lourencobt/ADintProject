@@ -26,7 +26,7 @@ from sqlalchemy import create_engine
 from sqlalchemy.orm import sessionmaker
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.sql.expression import except_
-from sqlalchemy.sql.sqltypes import Date, DateTime
+from sqlalchemy.sql.sqltypes import Boolean, Date, DateTime
 
 SECRET_LEN = 4
 
@@ -46,8 +46,9 @@ class users(Base):
     id = Column(String, primary_key=True)
     secret = Column(String)
     token = Column(String)
+    valid = Column(Boolean)
     def __repr__(self):
-        return "<user(id = %s, secret = %s, token = %s)>" % (self.id, self.secret, self.token)
+        return "<user(id = %s, secret = %s, token = %s, valid= %d)>" % (self.id, self.secret, self.token, self.valid)
 
 # Declaration of History Table
 class history(Base):
@@ -73,6 +74,10 @@ def listUsers():
 def listHistory():
     return session.query(history).all()
 
+#returns a user info
+def user(id):
+        return session.query(users).filter(users.id == id).first()
+
 #searches for information of an user
 def listUsersId():
     return [i.id for i in session.query(users.id).all()]
@@ -88,7 +93,7 @@ def newUser(id):
     if type(id) != str:
         return -1
     else: 
-        user = users(id = id)
+        user = users(id = id, valid = False)
         session.add(user)
         try:
             session.commit()
@@ -118,8 +123,6 @@ def newHistory(istID, gateID, date):
 
         return 0
 
-
-
 #Updates the token of an existent user 
 def updateToken( id, token):
     
@@ -129,6 +132,20 @@ def updateToken( id, token):
         return -1
     #update token
     user.token = token
+    session.commit()
+
+    return 0
+
+#Updates the used token of an existent user 
+def updateTokenUsed( id ):
+    
+    user = session.query(users).filter(users.id == id).first()
+    #check if there is any user with that id
+    if not user:
+        return -1
+
+    #update token
+    user.valid = True 
     session.commit()
 
     return 0
@@ -146,6 +163,7 @@ def updateSecret( id, secret ):
         return -1
     #update secret
     user.secret = secret
+    user.valid = True
     session.commit()
 
     return 0
