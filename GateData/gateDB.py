@@ -22,6 +22,7 @@ from sqlalchemy.orm import sessionmaker
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.sql.expression import except_
 
+from datetime import datetime
 SECRET_LEN = 4
 
 #SQL access layer initialization
@@ -100,6 +101,18 @@ def listHistoryOfSomeGate(gateID):
     return session.query(history).filter(history.gateId == gateID).all()
 
 def newHistory(gateId, success, attemptDate):
-    records = history(gateId = gateId, success = success, attemptDate = attemptDate)
-    session.add(records)
-    session.commit()
+    # Verify if the type of the arguments is correct
+    if type(gateId) != int or type(success) != bool or type(attemptDate) != datetime:
+        return -1
+    # Verify if Id is an Integer >= 1
+    elif gateId < 1:
+        return -2
+    else:
+        records = history(gateId = gateId, success = success, attemptDate = attemptDate)
+        session.add(records)
+        session.commit()
+
+        return 0
+
+#%%
+# %%

@@ -19,6 +19,7 @@
 # 7 → Couldn't reach GateDataService
 # 8 → Incorrect GateDataService response
 # 9 → Authentication of the Gate Failed
+#10 → Data sent in request was not valid to insert in database
 
 # Imports
 from flask import Flask, render_template, request, abort

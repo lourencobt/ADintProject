@@ -13,6 +13,8 @@
 # 7 → Couldn't reach GateDataService
 # 8 → Incorrect GateDataService response
 # 9 → Authentication of the Gate Failed
+#10 → Data sent in request was not valid to insert in database
+
 
 from flask import Flask, request, abort
 from flask.json import jsonify
@@ -71,6 +73,32 @@ def gates():
             "error": 0
         }
 
+# GET /API/gates/<path:gateID>/history -> List the attempts to access a gate
+@app.route("/API/gates/<path:gateID>/history")
+def getHistoryofSomeGate(gateID):
+    records = listHistoryOfSomeGate(gateID)
+    recordsList = []
+    for i in records:
+        recordsList.append({"success": i.success, "dateTime": i.attemptDate})
+    
+    return {
+        "historyList": recordsList, 
+        "error": 0
+    }
+
+# GET /API/gates/history -> List the attempts to access all gates
+@app.route("/API/gates/history")
+def getHistory():
+    records = listHistory()
+    recordsList = []
+    for i in records:
+        recordsList.append({"gateId": i.gateId, "success": i.success, "dateTime": i.attemptDate})
+    
+    return {
+        "historyList": recordsList, 
+        "error": 0
+    }
+
 # POST /API/gates/<gateID>/secret -> verify if posted secret of gate with id ID is valid
 @app.route("/API/gates/<path:gateID>/secret", methods=['POST'])
 def validateSecret(gateID):
@@ -93,6 +121,26 @@ def validateSecret(gateID):
             "valid": False,
             "error":0
         }
+
+# POST /API/gates/access -> Add a new attempt (successful or not) to access a gate to the history
+@app.route("/API/gates/access", methods=["POST"])
+def addAccess():
+    body = request.json
+    try:
+        gateID = body["gateID"]
+        success = body["success"]
+        dateTime = datetime.fromisoformat(body["dateTime"])
+    except:
+        abort(400)
+
+        # Register Gate
+    if (error := newHistory(gateID, success, dateTime)) == 0:
+        return {
+            "success": True, 
+            "error": 0
+        }
+    elif error == -1 or error == -2:
+        return raise_error(10, "Data sent in request was not valid to insert in database")
 
 if __name__ == "__main__":
     app.run(host='0.0.0.0', port=8000, debug=True)
