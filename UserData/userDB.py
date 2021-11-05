@@ -26,7 +26,7 @@ from sqlalchemy import create_engine
 from sqlalchemy.orm import sessionmaker
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.sql.expression import except_
-from sqlalchemy.sql.sqltypes import Date, DateTime
+from sqlalchemy.sql.sqltypes import Boolean, Date, DateTime
 
 SECRET_LEN = 4
 
@@ -45,12 +45,14 @@ class users(Base):
     __tablename__ = 'Users'
     id = Column(String, primary_key=True)
     secret = Column(String)
+    token = Column(String)
+    valid = Column(Boolean)
     def __repr__(self):
-        return "<user(id = %s, secret = %s)>" % (self.id, self.secret)
+        return "<user(id = %s, secret = %s, token = %s, valid= %d)>" % (self.id, self.secret, self.token, self.valid)
 
 # Declaration of History Table
 class history(Base):
-    __tablename__ = 'history'
+    __tablename__ = 'History'
     id = Column(Integer, primary_key=True)
     istID = Column(String)
     gateID = Column(Integer)
@@ -72,6 +74,10 @@ def listUsers():
 def listHistory():
     return session.query(history).all()
 
+#returns a user info
+def user(id):
+        return session.query(users).filter(users.id == id).first()
+
 #searches for information of an user
 def listUsersId():
     return [i.id for i in session.query(users.id).all()]
@@ -81,15 +87,13 @@ def listUserHistory(istID):
         return session.query(history).filter(history.istID == istID).all()
 
 
-def newUser(id, secret):
+#Creates a user
+def newUser(id):
     # Verify if the type of the arguments is correct
-    if type(id) != str or type(secret) != str:
+    if type(id) != str:
         return -1
-    # Verify if the secret has correct length. If not, this secret is not valid
-    elif len(secret) != SECRET_LEN:
-        return -2
     else: 
-        user = users(id = id, secret = secret)
+        user = users(id = id, valid = False)
         session.add(user)
         try:
             session.commit()
@@ -99,6 +103,7 @@ def newUser(id, secret):
 
         return 0
 
+#Creates a new action (history) of an existent user
 def newHistory(istID, gateID, date):
     # Verify if the type of the arguments is correct
     if type(istID) != str or type(gateID) != int or type(date) != datetime:
@@ -118,5 +123,49 @@ def newHistory(istID, gateID, date):
 
         return 0
 
+#Updates the token of an existent user 
+def updateToken( id, token):
+    
+    user = session.query(users).filter(users.id == id).first()
+    #check if there is any user with that id
+    if not user:
+        return -1
+    #update token
+    user.token = token
+    session.commit()
+
+    return 0
+
+#Updates the used token of an existent user 
+def updateTokenUsed( id ):
+    
+    user = session.query(users).filter(users.id == id).first()
+    #check if there is any user with that id
+    if not user:
+        return -1
+
+    #update token
+    user.valid = True 
+    session.commit()
+
+    return 0
+
+#Updates the secret an existent user
+def updateSecret( id, secret ):
+
+    # Verify if the secret has correct length. If not, this secret is not valid
+    if len(secret) != SECRET_LEN:
+        return -2
+
+    user = session.query(users).filter(users.id == id).first()
+    #check if there is any user with that id
+    if not user:
+        return -1
+    #update secret
+    user.secret = secret
+    user.valid = True
+    session.commit()
+
+    return 0
 
 # %%
