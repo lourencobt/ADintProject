@@ -3,15 +3,15 @@
 
 # Tablename = Users
 # Columns:
-#   - istID - String? 
+#   - istID - String 
 #   - name - String
 #   - secret - String - It can be a String with 4 random characters
-#   - secretUsed ?? - Boolean 
-#   - token ?? - string 
+#   - secretUsed - Boolean 
+#   - token - string 
 
-# Tablename = accessHistory ??
+# Tablename = History
 # Columns:
-#   - istID - String? 
+#   - istID - String 
 #   - gateID - Integer
 #   - dateTime - dateTime
 
@@ -75,17 +75,15 @@ def listHistory():
     return session.query(history).all()
 
 #returns a user info
-def user(id):
+def userInfor(id):
         return session.query(users).filter(users.id == id).first()
-
-#searches for information of an user
-def listUsersId():
-    return [i.id for i in session.query(users.id).all()]
-
 #searches for the history of an unique user
 def listUserHistory(istID):
         return session.query(history).filter(history.istID == istID).all()
 
+#searches for information of an user
+def listUsersId():
+    return [i.id for i in session.query(users.id).all()]
 
 #Creates a user
 def newUser(id):
@@ -99,8 +97,7 @@ def newUser(id):
             session.commit()
         except:
             session.rollback()
-            return -3
-
+            return -2
         return 0
 
 #Creates a new action (history) of an existent user
@@ -132,7 +129,11 @@ def updateToken( id, token):
         return -1
     #update token
     user.token = token
-    session.commit()
+    try:
+        session.commit()
+    except:
+        session.rollback()
+        return -2
 
     return 0
 
@@ -145,8 +146,12 @@ def updateTokenUsed( id ):
         return -1
 
     #update token
-    user.valid = True 
-    session.commit()
+    user.valid = False 
+    try:
+        session.commit()
+    except:
+        session.rollback()
+        return -2
 
     return 0
 
@@ -164,7 +169,11 @@ def updateSecret( id, secret ):
     #update secret
     user.secret = secret
     user.valid = True
-    session.commit()
+    try:
+        session.commit()
+    except:
+        session.rollback()
+        return -2
 
     return 0
 
