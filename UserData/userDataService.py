@@ -148,7 +148,7 @@ def resgistNewUser():
     else:
         return raise_error(100, "Something went wrong")
     
-@app.route("/API/users/<istID>")
+@app.route("/API/users/<path:istID>")
 def getUserInfo(istID):
 
     userInfo = userInfor(istID)   
@@ -170,7 +170,7 @@ def getUserInfo(istID):
     }
     
 #Get all the history from a specific user
-@app.route("/API/users/<istID>/history")
+@app.route("/API/users/<path:istID>/history")
 def getHistory(istID):
     
     history = listUserHistory(istID)   
