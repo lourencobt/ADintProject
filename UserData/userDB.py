@@ -86,12 +86,12 @@ def listUsersId():
     return [i.id for i in session.query(users.id).all()]
 
 #Creates a user
-def newUser(id):
+def newUser(id, token):
     # Verify if the type of the arguments is correct
-    if type(id) != str:
+    if type(id) != str or type(token) != str:
         return -1
     else: 
-        user = users(id = id, valid = False)
+        user = users(id = id, token=token, valid = False)
         session.add(user)
         try:
             session.commit()
@@ -138,7 +138,7 @@ def updateToken( id, token):
     return 0
 
 #Updates the used token of an existent user 
-def updateTokenUsed( id ):
+def updateSecretUsed( id ):
     
     user = session.query(users).filter(users.id == id).first()
     #check if there is any user with that id
