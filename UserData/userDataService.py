@@ -60,7 +60,7 @@ def raise_error(errorNumber, errorDescription):
 #Changes the previous token if exists already and 
 #changes the validation of the token to True
 @app.route("/API/users/<path:istID>/token", methods=['POST'])
-def updateToken(istID):
+def updatToken(istID):
 
     data = request.json
     try:
@@ -151,24 +151,24 @@ def resgistNewUser():
     
 @app.route("/API/users/<path:istID>")
 def getUserInfo(istID):
-
     userInfo = userInfor(istID)   
-    userInformation = {}
-    
-    try:
-        userInformation[{"success": userInfo.id, 
+    if userInfo == None:
+        return {
+            "userInfo": None, 
+            "error": 0
+        }
+    else:
+        return {
+            "userInfo":  {
+                        "istID": userInfo.id,
                         "secret": userInfo.secret,
                         "token": userInfo.token, 
                         "valid": userInfo.valid
-                        }]
-    except:
-        return raise_error(13 ,"That is not a valid user")
-
-    
-    return {
-        "userInfo": userInformation, 
-        "error": 0
-    }
+                        },
+            "error": 0
+        }
+        
+        
     
 #Get all the history from a specific user
 @app.route("/API/users/<path:istID>/history")
