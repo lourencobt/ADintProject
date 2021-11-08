@@ -15,6 +15,7 @@
 # 9 → Authentication of the Gate Failed
 #10 → Data sent in request was not valid to insert in database
 
+# ! GET endpoints should perform authentication with gateID + Secret?
 
 from flask import Flask, request, abort
 from flask.json import jsonify
@@ -128,19 +129,49 @@ def addAccess():
     body = request.json
     try:
         gateID = body["gateID"]
+        gateSecret = body["secret"]
         success = body["success"]
         dateTime = datetime.fromisoformat(body["dateTime"])
     except:
         abort(400)
 
+    # Authentication of the gate
+    try:
+        r = requests.post(GATEDATASERVICE+"/API/gates/{}/secret".format(gateID), json={"secret": gateSecret})
+    except:
+        return raise_error(7, "Couldn't Reach GateDataService")
+
+    if r.status_code == 200:
+        try:
+            error = r.json()["error"]
+        except:
+            return raise_error(8, "Incorrect GateDataService response")
+        
+        if error == 0:
+            try:
+                valid = r.json()["valid"]
+            except:
+                return raise_error(8, "Incorrect GateDataService response")
+        elif error > 0:
+            try:
+                errorDescription = r.json()["errorDescription"]
+            except:
+                return raise_error(8, "Incorrect GateDataService response")
+            
+            return raise_error(error, errorDescription)
+    else: 
+        abort(400)
+
+    if valid:
         # Register Gate
-    if (error := newHistory(gateID, success, dateTime)) == 0:
-        return {
-            "success": True, 
-            "error": 0
-        }
-    elif error == -1 or error == -2:
-        return raise_error(10, "Data sent in request was not valid to insert in database")
+        if (error := newHistory(gateID, success, dateTime)) == 0:
+            return {
+                "error": 0
+            }
+        elif error == -1 or error == -2:
+            return raise_error(10, "Data sent in request was not valid to insert in database")
+    else:
+        return raise_error(9, "Authentication of the Gate failed")
 
 if __name__ == "__main__":
     app.run(host='0.0.0.0', port=8000, debug=True)

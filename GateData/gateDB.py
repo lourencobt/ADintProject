@@ -114,5 +114,3 @@ def newHistory(gateId, success, attemptDate):
 
         return 0
 
-#%%
-# %%
