@@ -263,7 +263,6 @@ def accessHistoryAllGates():
                 historyList = r.json()["historyList"]
             except:
                 return "Error: Something went wrong in Server Response"
-            print(historyList)
             return render_template("attemptsHistoryAllGates.html", historyInfo = historyList)
         elif error > 0:
             try:
@@ -295,7 +294,6 @@ def accessHistoryOfSomeGate(gateID):
                 historyList = r.json()["historyList"]
             except:
                 return "Error: Something went wrong in Server Response"
-            print(historyList)
             return render_template("attemptsHistoryOfSomeGate.html", gateID = gateID, historyInfo = historyList)
         elif error > 0:
             try:
