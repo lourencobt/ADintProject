@@ -108,7 +108,7 @@ def validateSecret(gateID):
         secret = body["secret"]
     except:
         abort(400)
-
+    print(body)
     #Verify there is such a code and if it is still valid
     if (error := secretOfGate(gateID)) == secret:
         return {
@@ -128,8 +128,8 @@ def validateSecret(gateID):
 def addAccess():
     body = request.json
     try:
-        gateID = body["gateID"]
-        gateSecret = body["secret"]
+        gateID = int(body["gateID"])
+        gateSecret = body["gateSecret"]
         success = body["success"]
         dateTime = datetime.fromisoformat(body["dateTime"])
     except:

@@ -22,12 +22,11 @@
 #10 → Data sent in request was not valid to insert in database
 
 # Imports
-from flask import Flask, render_template, request, abort, redirect
-from flask import json
+import os
+from flask import Flask, render_template, request, abort, redirect, session
 from flask.json import jsonify
 import datetime 
 import requests
-from sqlalchemy import exc
 
 GATEDATASERVICE = "http://localhost:8000/"
 SECRET_LEN = 4
@@ -47,6 +46,7 @@ def generate_code():
 
 def raise_error(errorNumber, errorDescription):
     return {"error": errorNumber, "errorDescription":errorDescription}
+
 
 
 app = Flask(__name__)
@@ -75,6 +75,7 @@ def gateApp():
     except:
         return "Server is down for the moment. Try again later."
 
+    print(r.json())
     if r.status_code == 200:
         try:
             error = r.json()["error"]
@@ -87,8 +88,11 @@ def gateApp():
             except:
                 return "Error: Something went wrong in Server Response"
 
-            return render_template("scanner.html")
-        
+            if valid == True:
+                session["gateSecret"] = gateSecret
+                return render_template("scanner.html", gateID = gateID)
+            else:
+                return render_template("authenticateGate.html", secret_len = SECRET_LEN, message = "")
         elif error > 0:
             try:
                 errorDescription = r.json()["errorDescription"]
@@ -100,6 +104,65 @@ def gateApp():
         abort(r.status_code)
 
 # API
+# for the Gate to verify if a code is valid
+@app.route("/gateApp/API/gates/<path:gateID>/code", methods=['POST'])
+def verifyCode(gateID):
+    print(session["gateSecret"])
+    data = request.json
+    print(data)
+    try:
+        istID = data["istID"]
+        gateSecret = session["gateSecret"]
+        inserted_code = data["secret"]
+    except:
+        abort(400)
+
+    JoaoCode = {}
+    JoaoCode['code'] = "qmsj"
+    JoaoCode['datetime'] = datetime.datetime.now()
+
+     # TODO: Verify there is such a code and if it is still valid
+    if inserted_code == JoaoCode['code']:
+        # Code becomes invalid after 1 minute of creation
+        verificationDate = datetime.datetime.now()
+        if verificationDate - JoaoCode["datetime"] > datetime.timedelta(minutes = 1):
+            return {
+                "valid": False, 
+                "error": 0
+            }
+        else:
+            try:
+                r = requests.post(GATEDATASERVICE+"/API/gates/access", json={"gateID": gateID, "gateSecret": gateSecret,"success": True, "dateTime": str(verificationDate)} )
+                # TODO: Missing post to user history
+            except:
+                return raise_error(7, "Couldn't Reach GateDataService")
+            
+            if r.status_code == 200:
+                try:
+                    error = r.json()["error"]
+                except:
+                    return raise_error(8, "Incorrect GateDataService response")
+
+                if error == 0:
+                    return {
+                        "valid": True,
+                        "error": 0
+                    }
+                elif error != 0:
+                    try:
+                        errorDescription = r.json()["errorDescription"]
+                    except:
+                        return raise_error(8, "Incorrect GateDataService response")
+            
+                    return raise_error(error, errorDescription)
+            else:
+                abort(r.status_code)
+    else:
+        return {
+                "valid": False, 
+                "error": 0
+        }
+
 
 # * Admin Web App Endpoints implementation
 
@@ -125,62 +188,6 @@ def getNewCode(username):
         "code": code, 
         "error": 0
     }
-
-# for the Gate to verify if a code is valid
-@app.route("/API/gates/<path:gateID>/code", methods=['POST'])
-def verifyCode(gateID):
-    data = request.json
-    try:
-        gateSecret = data["secret"]
-        inserted_code = data["code"]
-    except:
-        abort(400)
-
-    # Verify there is such a code and if it is still valid
-    if JoaoCode["code"] == inserted_code:
-        # Code becomes invalid after 1 minute of creation
-        if datetime.datetime.now() - JoaoCode["datetime"] > datetime.timedelta(minutes = 1):
-            return {
-                "valid": False, 
-                "error": 0
-            }
-        else: 
-            try:
-                r = requests.post(GATEDATASERVICE+"/API/gates/{}/activation".format(gateID), json={"secret": gateSecret} )
-            except:
-                return raise_error(7, "Couldn't Reach GateDataService")
-
-            if r.status_code == 200:
-                try:
-                    error = r.json()["error"]
-                except:
-                    return raise_error(8, "Incorrect GateDataService response")
-
-                if error == 0:
-                    try:
-                        success = r.json()["success"]
-                    except:
-                        return raise_error(8, "Incorrect GateDataService response")
-                    
-                    return {
-                        "valid": success, 
-                        "error": 0
-                    }
-                elif error > 0:
-                    try:
-                        errorDescription = r.json()["errorDescription"]
-                    except:
-                        return raise_error(8, "Incorrect GateDataService response")
-            
-                    return raise_error(error, errorDescription)
-            else:
-                abort(r.status_code)
-    else:
-        return {
-                "valid": False, 
-                "error": 0
-            }
-
    
 # * Admin Web App Endpoints implementation
 
@@ -263,4 +270,5 @@ def allGatesAvailable():
         return "Error: Server not working correctly. Contact Admin"
 
 if __name__ == "__main__":
+    app.secret_key = os.urandom(24)
     app.run(host='0.0.0.0', port=8001, debug=True)

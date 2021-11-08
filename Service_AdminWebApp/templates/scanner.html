@@ -4,6 +4,10 @@
   <title>QRCode Reader</title>
   <script src="/static/jsQR.js" charset="utf-8"></script>
   <link href="https://fonts.googleapis.com/css?family=Ropa+Sans" rel="stylesheet">
+  <!-- Fomantic UI -->
+  <script src="https://cdn.jsdelivr.net/npm/jquery@3.3.1/dist/jquery.min.js"></script>
+  <link rel="stylesheet" type="text/css" href="https://cdn.jsdelivr.net/npm/fomantic-ui@2.8.7/dist/semantic.css">
+  <script src="https://cdn.jsdelivr.net/npm/fomantic-ui@2.8.7/dist/semantic.js"></script>
   <style>
     body {
       font-family: 'Ropa Sans', sans-serif;
@@ -34,14 +38,14 @@
     #canvas {
       width: 100%;
     }
-
+    
     #output {
       margin-top: 20px;
       background: #eee;
       padding: 10px;
       padding-bottom: 0;
     }
-
+    
     #output div {
       padding-bottom: 10px;
       word-wrap: break-word;
@@ -62,6 +66,7 @@
     <div id="outputMessage">No QR code detected.</div>
     <div hidden><b>Data:</b> <span id="outputData"></span></div>
   </div>
+
   <script>
     var video = document.createElement("video");
     var canvasElement = document.getElementById("canvas");
@@ -70,7 +75,7 @@
     var outputContainer = document.getElementById("output");
     var outputMessage = document.getElementById("outputMessage");
     var outputData = document.getElementById("outputData");
-    var teste = 0;
+    var stop = 0;
 
     function drawLine(begin, end, color) {
       canvas.beginPath();
@@ -89,6 +94,7 @@
       requestAnimationFrame(tick);
     });
 
+    var stop = 0
     function tick() {
       loadingMessage.innerText = "⌛ Loading video..."
       if (video.readyState === video.HAVE_ENOUGH_DATA) {
@@ -104,21 +110,63 @@
           inversionAttempts: "dontInvert",
         });
         if (code) {
-            console.log(code.data)
-            teste = 1
           drawLine(code.location.topLeftCorner, code.location.topRightCorner, "#FF3B58");
           drawLine(code.location.topRightCorner, code.location.bottomRightCorner, "#FF3B58");
           drawLine(code.location.bottomRightCorner, code.location.bottomLeftCorner, "#FF3B58");
           drawLine(code.location.bottomLeftCorner, code.location.topLeftCorner, "#FF3B58");
           outputMessage.hidden = true;
           outputData.parentElement.hidden = false;
-          outputData.innerText = code.data;
+
+          stop = 1
+          let text = code.data;
+          
+          try
+          {
+            const obj = JSON.parse(text);
+            console.log(obj.secret);  
+            $.ajax({
+              url: "/gateApp/API/gates/{{ gateID }}/code",
+              type: "POST",
+              dataType: "json",
+              contentType: 'application/json',
+              data: text,
+              success: function(data)
+              {
+                // ask professor if there is the need to verify data here
+                if(data.valid == true)
+                {
+                  outputContainer.style.background = "rgb(0, 226, 87)";
+                  outputData.innerText = code.data + "\n" + "You can enter";
+                  setTimeout(function(){
+                    outputContainer.style.background = "#eee";
+                    stop = 0;
+                    requestAnimationFrame(tick);
+                  }, 6000)
+                }
+                else
+                {
+                  outputData.innerText = code.data + "\n" + "You can't enter";
+                  outputContainer.style.background = "rgb(167, 0, 0)";
+                  setTimeout(function(){
+                    outputContainer.style.background = "#eee";
+                    stop = 0;
+                    requestAnimationFrame(tick);
+                  }, 2000)
+                } 
+              }
+            });
+          }
+          catch(e)
+          {
+            stop = 0;
+            console.log("Wrong Format when QRcode decoding");
+          }
         } else {
           outputMessage.hidden = false;
           outputData.parentElement.hidden = true;
         }
       }
-      if(teste === 0)
+      if(stop === 0)
       {
         requestAnimationFrame(tick);
       }
