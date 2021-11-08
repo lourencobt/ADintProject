@@ -166,37 +166,11 @@ def verifyCode(gateID):
 
 # * Admin Web App Endpoints implementation
 
-
-
-# Intermediary Version
-
-# * Service Endpoints implementation
-
-# for the UserApp to retrieve a new user code
-@app.route("/API/users/<path:username>/code")
-def getNewCode(username):
-    if username != "joao":
-        abort(404)
-
-    # Invalidate last code if still valid
-    code = generate_code()
-
-    JoaoCode['code'] = code
-    JoaoCode['datetime'] = datetime.datetime.now()
-
-    return {
-        "code": code, 
-        "error": 0
-    }
-   
-# * Admin Web App Endpoints implementation
-
-@app.route("/admin/createGate")
+@app.route("/adminApp/WEB/createGate", methods=["GET","POST"])
 def completeForm():
-    return render_template("createGate.html")
-
-@app.route("/admin/newGate", methods = ['POST'])
-def wasSuccess():
+    if request.method == "GET":
+        return render_template("createGate.html")
+    elif request.method == "POST":
         result = request.form
         try:
             data = jsonify(result)
@@ -235,11 +209,11 @@ def wasSuccess():
         elif r.status_code == 400:
             return "Error: Inserted information not in the correct format"
         else:
-            return "Error: Server not working correctly. Contact Admin"
+            return "Error: Server not working correctly. Contact Admin"   
         
 #listing of registered gates
 # show a table with gates info (id, location, secret, activations)
-@app.route("/admin/gates")
+@app.route("/adminApp/WEB/gates")
 def allGatesAvailable():
     try:
         r = requests.get(GATEDATASERVICE+"/API/gates")
@@ -269,6 +243,92 @@ def allGatesAvailable():
     else:
         return "Error: Server not working correctly. Contact Admin"
 
+# GET /adminApp/WEB/history - render page that shows a table with the 
+# anonimized history of every attempt to open a gate
+@app.route("/adminApp/WEB/history")
+def accessHistoryAllGates():
+    try:
+        r = requests.get(GATEDATASERVICE+"/API/gates/history")
+    except:
+        return "Server is down for the moment. Try again later."
+
+    if r.status_code == 200:
+        try:
+            error = r.json()["error"]
+        except:
+            return "Error: Something went wrong in Server Response"
+        
+        if error == 0:
+            try:
+                historyList = r.json()["historyList"]
+            except:
+                return "Error: Something went wrong in Server Response"
+            print(historyList)
+            return render_template("attemptsHistoryAllGates.html", historyInfo = historyList)
+        elif error > 0:
+            try:
+                errorDescription = r.json()["errorDescription"]
+            except:
+                return "Error: Something went wrong in Server Response"
+            
+            return "Error: " + errorDescription
+    else:
+        return "Error: Server not working correctly. Contact Admin"
+
+# GET /adminApp/WEB/history/<gateID> - render page that shows a table with the 
+# anonimized history of every attempt to open a specific gate
+@app.route("/adminApp/WEB/history/<path:gateID>")
+def accessHistoryOfSomeGate(gateID):
+    try:
+        r = requests.get(GATEDATASERVICE+"/API/gates/{}/history".format(gateID))
+    except:
+        return "Server is down for the moment. Try again later."
+
+    if r.status_code == 200:
+        try:
+            error = r.json()["error"]
+        except:
+            return "Error: Something went wrong in Server Response"
+        
+        if error == 0:
+            try:
+                historyList = r.json()["historyList"]
+            except:
+                return "Error: Something went wrong in Server Response"
+            print(historyList)
+            return render_template("attemptsHistoryOfSomeGate.html", gateID = gateID, historyInfo = historyList)
+        elif error > 0:
+            try:
+                errorDescription = r.json()["errorDescription"]
+            except:
+                return "Error: Something went wrong in Server Response"
+            
+            return "Error: " + errorDescription
+    else:
+        return "Error: Server not working correctly. Contact Admin"
+
+
+# Intermediary Version
+
+# * Service Endpoints implementation
+
+# for the UserApp to retrieve a new user code
+@app.route("/API/users/<path:username>/code")
+def getNewCode(username):
+    if username != "joao":
+        abort(404)
+
+    # Invalidate last code if still valid
+    code = generate_code()
+
+    JoaoCode['code'] = code
+    JoaoCode['datetime'] = datetime.datetime.now()
+
+    return {
+        "code": code, 
+        "error": 0
+    }
+   
 if __name__ == "__main__":
     app.secret_key = os.urandom(24)
     app.run(host='0.0.0.0', port=8001, debug=True)

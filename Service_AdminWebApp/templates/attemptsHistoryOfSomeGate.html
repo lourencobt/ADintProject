@@ -10,21 +10,19 @@
 
 <body>
   <div style="margin: auto;width: 25%;padding: 10px;">
-    <h2 class="ui header">All Gates</h2>
+    <h2 class="ui header">History of attempts of gate {{ gateID }}</h2>
     <table class="ui single line table">
       <thead>
        <tr>
-         <th>id</th>
-         <th>secret</th>
-         <th>location</th>
+         <th>Success</th>
+         <th>Datetime</th>
        </tr>
       </thead>
       <tbody>
-        {% for col in gatesInfo %}
+        {% for col in historyInfo %}
            <tr>
-              <td>{{ col.id           }}</td>
-              <td>{{ col.secret       }}</td>
-              <td>{{ col.location     }}</td>
+              <td>{{ col.success      }}</td>
+              <td>{{ col.dateTime     }}</td>
            </tr>
         {% endfor %}
       </tbody>
