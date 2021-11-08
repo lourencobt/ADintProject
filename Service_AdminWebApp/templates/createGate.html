@@ -1,16 +1,27 @@
-{% block content %}
-    <div>
-    
-    <form action = "newGate" method="POST">
+<html>
+    <head>
+        <script src="https://cdn.jsdelivr.net/npm/jquery@3.3.1/dist/jquery.min.js"></script>
+        <link rel="stylesheet" type="text/css" href="https://cdn.jsdelivr.net/npm/fomantic-ui@2.8.7/dist/semantic.css">
+        <script src="https://cdn.jsdelivr.net/npm/fomantic-ui@2.8.7/dist/semantic.js"></script>
+    </head>
 
-        <label for="id">ID:</label><br>
-        <input type="number" id="id" name="id"><br>
+    <body>
+        <div style="margin: auto;width: 25%;padding: 10px;">
+            <h2 class="ui header">New Gate</h2>
+            <form class="ui form" action = "" method="POST">
+                <div class="field">
+                    <label for="id">Gate ID</label>
+                    <input type="number" id="id" name="id"><br>
+                </div>
+                <div class="field">
+                    <label for=" location">Location</label>
+                    <input type="text" id="location" name="location"><br>
+                </div>
+                <input class="ui button" type="submit">   
+            </form>
+        </div>
+        
+    </body>
+</html>
 
-        <label for=" location">Location:</label><br>
-        <input type="text" id="location" name="location"><br>
 
-    <input type="submit">
-
-    </form>
-    </div>
-{% endblock %}
