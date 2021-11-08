@@ -27,7 +27,7 @@ from flask import Flask, render_template, request, abort
 from flask import json
 from flask.json import jsonify
 from sqlalchemy import exc
-from userDB import listHistory, listUserHistory, newHistory, updateSecret , newUser, userInfor, updateToken, updateTokenUsed
+from userDB import listHistory, listUserHistory, newHistory, updateSecret , newUser, userInfor, updateToken, updateSecretUsed
 import random
 from datetime import datetime
 
@@ -59,12 +59,12 @@ def raise_error(errorNumber, errorDescription):
 #Creates the token for the session
 #Changes the previous token if exists already and 
 #changes the validation of the token to True
-@app.route("/API/users/token", methods=['POST'])
-def updatToken():
+@app.route("/API/users/<path:istID>/token", methods=['POST'])
+def updateToken(istID):
 
     data = request.json
     try:
-        id = data["istID"]
+        id = istID
         token = data["token"]
     except:
         abort(400)
@@ -80,12 +80,12 @@ def updatToken():
     
 #Updates the secret after being created the QRCode
 #The user must exist in order to create this QRCode
-@app.route("/API/users/secret", methods=['POST'])
-def updateSecretUser():
+@app.route("/API/users/<path:istID>/secret", methods=['POST'])
+def updateSecretUser(istID):
 
     data = request.json
     try:
-        id = data["istID"]
+        id = istID
         secret = data["secret"]
     except:
         abort(400)
@@ -102,16 +102,16 @@ def updateSecretUser():
     
 #Put the token in invalid mode
 #Change the boolean to False
-@app.route("/API/users/invalid", methods=['POST'])
-def updatAccessInvalid():
+@app.route("/API/users/<path:istID>/invalid", methods=['POST'])
+def updateAccessInvalid(istID):
 
     data = request.json  
     try:
-        id = data["istID"]
+        id = istID
     except:
         abort(400)
 
-    if (error := updateTokenUsed( id )) == 0:
+    if (error := updateSecretUsed( id )) == 0:
             return { 
                 "error": 0
             }
@@ -135,9 +135,10 @@ def resgistNewUser():
     
     try:
         id = data["istID"]
+        token = data["token"]
     except:
         abort(400)
-    if (error := newUser( id )) == 0:
+    if (error := newUser( id, token )) == 0:
             return { 
                 "error": 0
             }
@@ -148,18 +149,18 @@ def resgistNewUser():
     else:
         return raise_error(100, "Something went wrong")
     
-@app.route("/API/users/<istID>")
+@app.route("/API/users/<path:istID>")
 def getUserInfo(istID):
 
     userInfo = userInfor(istID)   
-    userInformation = []
+    userInformation = {}
     
     try:
-        userInformation.append({"success": userInfo.id, 
+        userInformation[{"success": userInfo.id, 
                         "secret": userInfo.secret,
                         "token": userInfo.token, 
                         "valid": userInfo.valid
-                        })
+                        }]
     except:
         return raise_error(13 ,"That is not a valid user")
 
@@ -170,7 +171,7 @@ def getUserInfo(istID):
     }
     
 #Get all the history from a specific user
-@app.route("/API/users/<istID>/history")
+@app.route("/API/users/<path:istID>/history")
 def getHistory(istID):
     
     history = listUserHistory(istID)   
