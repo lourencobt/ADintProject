@@ -47,8 +47,10 @@ class users(Base):
     secret = Column(String)
     token = Column(String)
     valid = Column(Boolean)
+    datesecret = Column(DateTime)
     def __repr__(self):
-        return "<user(id = %s, secret = %s, token = %s, valid= %d)>" % (self.id, self.secret, self.token, self.valid)
+        return "<user(id = %s, secret = %s, token = %s, valid= %d, date secret= %s)>"%(
+            self.id, self.secret, self.token, self.valid, str(self.datesecret))
 
 # Declaration of History Table
 class history(Base):
@@ -58,7 +60,8 @@ class history(Base):
     gateID = Column(Integer)
     date = Column(DateTime)
     def __repr__(self):
-        return "<history( ID = %d, istID = %s, gateID = %d, date = %s)>" % (self.id, self.istID, self.gateID, str(self.date))
+        return "<history( ID = %d, istID = %s, gateID = %d, date = %s)>" % (
+            self.id, self.istID, self.gateID, str(self.date))
 
 
 engine = create_engine('sqlite:///%s'%(DATABASE_FILE), echo=False, connect_args={"check_same_thread": False}) #echo = True shows all SQL calls
@@ -169,6 +172,7 @@ def updateSecret( id, secret ):
     #update secret
     user.secret = secret
     user.valid = True
+    user.datesecret = datetime.now()
     try:
         session.commit()
     except:

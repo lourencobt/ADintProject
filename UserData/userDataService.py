@@ -163,7 +163,8 @@ def getUserInfo(istID):
                         "istID": userInfo.id,
                         "secret": userInfo.secret,
                         "token": userInfo.token, 
-                        "valid": userInfo.valid
+                        "valid": userInfo.valid,
+                        "userSecret" : userInfo.datesecret
                         },
             "error": 0
         }
@@ -208,7 +209,7 @@ def postHistory():
     try:
         date = datetime.strptime(date,"%d/%m/%y %H:%M")
     except:
-        return raise_error(16,"Date not valid : format 21/11/06 16:30 dd/mm/yyyy HH:MM")
+        return raise_error(16,"Date not valid : format -> dd/mm/yy HH:MM")
 
     if (error := newHistory(istID,gateID,date)) == 0:
             return { 
