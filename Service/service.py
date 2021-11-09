@@ -127,7 +127,7 @@ def callback():
 
 
 @app.route("/homepage", methods=["GET"])
-def profile():
+def homePage():
     
     fenix = OAuth2Session(client_id, token=session['oauth_token'])
 
@@ -152,6 +152,29 @@ def qrcodeRequest():
     except:
         return "error"
 
+    if r.status_code == 200:
+    
+        try:
+            error = r.json()["error"]
+        except:
+            return "Error: Something went wrong in Server Response"
+        
+        if error == 0:
+            return render_template("qrcode.html", code = body)
+
+        elif error > 0:
+            try:
+                errorDescription = r.json()["errorDescription"]
+            except:
+                return "Error: Something went wrong in Server Response"
+            
+            return "Error: " + errorDescription
+            
+        elif r.status_code == 400:
+            return "Error: Inserted information not in the correct format"
+        else:
+            return "Error: Server not working correctly. Contact Admin"  
+
     return render_template("qrcode.html", code = body)
     
     
@@ -168,10 +191,37 @@ def userHistoryRequest():
     except:
         return "error"
 
-    history = r.json()["historyList"]
+    if r.status_code == 200:
+    
+        try:
+            error = r.json()["error"]
+        except:
+            return "Error: Something went wrong in Server Response"
+        
+        if error == 0:
+            try:
+                history = r.json()["historyList"]
+            except:
+                return "Error: Something went wrong in Server Response"
+            
+            return render_template("userHistory.html" , history = history )
 
-    return render_template("userHistory.html" , history = history )
+        elif error > 0:
+            try:
+                errorDescription = r.json()["errorDescription"]
+            except:
+                return "Error: Something went wrong in Server Response"
+            
+            return "Error: " + errorDescription
+            
+        elif r.status_code == 400:
+            return "Error: Inserted information not in the correct format"
+        else:
+            return "Error: Server not working correctly. Contact Admin"  
 
+    
+
+    
 
 
 
