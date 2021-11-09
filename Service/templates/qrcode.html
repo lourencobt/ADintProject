@@ -1,1 +1,17 @@
-{{code}}
+<script src="https://cdn.rawgit.com/davidshimjs/qrcodejs/gh-pages/qrcode.min.js"></script>
+
+
+<html>
+    <head>
+
+        <script type="text/javascript" src="app.js"></script>
+
+             <div id="qrcode"></div>
+             <script type="text/javascript">
+
+     
+             new QRCode(document.getElementById("qrcode"), "{{code}}" );
+        </script>
+
+    </head>
+</html>
