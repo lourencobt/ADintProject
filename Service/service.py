@@ -23,12 +23,14 @@
 
 # Imports
 import os
-from flask import Flask, render_template, request, abort, redirect, session
+from requests_oauthlib import OAuth2Session
+from flask import Flask, render_template, request, abort, redirect, session, url_for
 from flask.json import jsonify
 import datetime 
 import requests
 
 GATEDATASERVICE = "http://localhost:8000/"
+USERDATASERVICE = "http://127.0.0.1:8001/"
 SECRET_LEN = 4
 
 import random
@@ -53,6 +55,125 @@ app = Flask(__name__)
 
 # * User Web App Endpoints implementation
 # WEB
+
+
+#Information about my application in fenix
+client_id = "570015174623409"
+client_secret = "iS/R8Kk5GeQCg7tiDoJnmvWBWM2QYthKaRvcVILPdH8hQhnNCgQ8awJVMM1/fCCzUqClFFyKZnQeW7frIyAV6w=="
+authorization_base_url = 'https://fenix.tecnico.ulisboa.pt/oauth/userdialog'
+token_url = 'https://fenix.tecnico.ulisboa.pt/oauth/access_token'
+
+@app.route("/")
+def demo():
+    #User Authorization.
+    #Redirect the user/resource owner to the OAuth provider (i.e. fenix)
+    #using an URL with a few key OAuth parameters.
+    
+    fenix = OAuth2Session(client_id, redirect_uri="http://localhost:5000/callback")
+    authorization_url, state = fenix.authorization_url(authorization_base_url)
+
+    # State is used to prevent CSRF, keep this for later.
+    session['oauth_state'] = state
+    return redirect(authorization_url)
+
+# Step 2: User authorization, this happens on the provider.
+
+@app.route("/callback")
+def callback():
+    
+    # Step 3: Retrieving an access token.
+
+    fenix = OAuth2Session(client_id, state=session['oauth_state'], 
+    redirect_uri="http://localhost:5000/callback")
+    
+    token = fenix.fetch_token(token_url, client_secret=client_secret,
+                               authorization_response=request.url)
+
+    # At this point you can fetch protected resources but lets save
+    # the token and show how this is done from a persisted token
+    # in /profile.
+    session['oauth_token'] = token
+
+    userinfo = fenix.get(
+        'https://fenix.tecnico.ulisboa.pt/api/fenix/v1/person').json()
+
+    token = session['oauth_token']["access_token"]
+
+    body = {"istID" : userinfo["username"], "token" : token}
+
+    try:
+        r = requests.post( USERDATASERVICE + "API/users", json = body)
+    except:
+        return "Server is down for the moment. Try again later."
+
+    if r.status_code == 200:
+        
+        try:
+            error = r.json()["error"]
+        except:
+            return "Error: Something went wrong in Server Response"
+        
+        if error == 0:
+            return redirect("/homepage")
+
+        elif error == 12:
+            r = requests.post( USERDATASERVICE + "API/users", json = body)
+            return redirect("/homepage")
+
+        else:
+            return  "Error: Something happened with your account. Contact Admin"
+    else:
+        return "Error: Server not working correctly. Contact Admin"
+
+
+@app.route("/homepage", methods=["GET"])
+def profile():
+    
+    fenix = OAuth2Session(client_id, token=session['oauth_token'])
+
+    return render_template("homePage.html" , username = fenix.get(
+        'https://fenix.tecnico.ulisboa.pt/api/fenix/v1/person').json()["name"])
+
+
+    
+@app.route("/QRCode", methods=["GET"])
+def qrcodeRequest():
+
+    fenix = OAuth2Session(client_id, token=session['oauth_token'])
+
+    username = fenix.get(
+        'https://fenix.tecnico.ulisboa.pt/api/fenix/v1/person').json()["username"]
+
+
+    body = {'istID': username, 'secret': generate_code()}
+
+    try:
+        r = requests.post( USERDATASERVICE + "API/users/"+ username +"/secret", json = body)
+    except:
+        return "error"
+
+    return render_template("qrcode.html", code = body)
+    
+    
+@app.route("/userHistory", methods=["GET"])
+def userHistoryRequest():
+
+    fenix = OAuth2Session(client_id, token=session['oauth_token'])
+
+    username = fenix.get(
+        'https://fenix.tecnico.ulisboa.pt/api/fenix/v1/person').json()["username"]
+
+    try:
+        r = requests.get( USERDATASERVICE + "API/users/"+ username +"/history")
+    except:
+        return "error"
+
+    history = r.json()["historyList"]
+
+    return render_template("userHistory.html" , history = history )
+
+
+
 
 
 # * Gate Web App + Service Endpoints implementation
@@ -319,8 +440,8 @@ def getNewCode(username):
     # Invalidate last code if still valid
     code = generate_code()
 
-    JoaoCode['code'] = code
-    JoaoCode['datetime'] = datetime.datetime.now()
+    #JoaoCode['code'] = code
+    #JoaoCode['datetime'] = datetime.datetime.now()
 
     return {
         "code": code, 
@@ -328,5 +449,8 @@ def getNewCode(username):
     }
    
 if __name__ == "__main__":
+
+    os.environ['OAUTHLIB_INSECURE_TRANSPORT'] = "1"
     app.secret_key = os.urandom(24)
-    app.run(host='0.0.0.0', port=8001, debug=True)
+    app.run(debug=True, host = "localhost", port = "5000")
+    #app.run(host='0.0.0.0', port=8001, debug=True)
