@@ -3,62 +3,16 @@
   <meta charset="utf-8">
   <title>QRCode Reader</title>
   <script src="/static/jsQR.js" charset="utf-8"></script>
+  <link rel="stylesheet" type="text/css" href="/static/style.css">
   <link href="https://fonts.googleapis.com/css?family=Ropa+Sans" rel="stylesheet">
   <!-- Fomantic UI -->
   <script src="https://cdn.jsdelivr.net/npm/jquery@3.3.1/dist/jquery.min.js"></script>
   <link rel="stylesheet" type="text/css" href="https://cdn.jsdelivr.net/npm/fomantic-ui@2.8.7/dist/semantic.css">
   <script src="https://cdn.jsdelivr.net/npm/fomantic-ui@2.8.7/dist/semantic.js"></script>
-  <style>
-    body {
-      font-family: 'Ropa Sans', sans-serif;
-      color: #333;
-      max-width: 640px;
-      margin: 0 auto;
-      position: relative;
-    }
-
-    #githubLink {
-      position: absolute;
-      right: 0;
-      top: 12px;
-      color: #2D99FF;
-    }
-
-    h1 {
-      margin: 10px 0;
-      font-size: 40px;
-    }
-
-    #loadingMessage {
-      text-align: center;
-      padding: 40px;
-      background-color: #eee;
-    }
-
-    #canvas {
-      width: 100%;
-    }
-    
-    #output {
-      margin-top: 20px;
-      background: #eee;
-      padding: 10px;
-      padding-bottom: 0;
-    }
-    
-    #output div {
-      padding-bottom: 10px;
-      word-wrap: break-word;
-    }
-
-    #noQRFound {
-      text-align: center;
-    }
-  </style>
 </head>
 <body>
   <h1>Gate Web App</h1>
-  <a id="githubLink" href="https://github.com/cozmo/jsQR">View documentation on Github</a>
+  <a id="Link" href="https://github.com/cozmo/jsQR">View documentation on Github</a>
   <h2>Show QRCode</h2>
   <div id="loadingMessage">🎥 Unable to access video stream (please make sure you have a webcam enabled)</div>
   <canvas id="canvas" hidden></canvas>
@@ -132,6 +86,7 @@
               data: text,
               success: function(data)
               {
+                console.log(data)
                 // ask professor if there is the need to verify data here
                 if(data.valid == true)
                 {

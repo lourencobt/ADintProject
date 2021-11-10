@@ -1,16 +1,19 @@
-<!DOCTYPE html>
-<html lang="en">
+<html>
 <head>
-    <script src="https://cdn.jsdelivr.net/npm/jquery@3.3.1/dist/jquery.min.js"></script>
-    <link rel="stylesheet" type="text/css" href="https://cdn.jsdelivr.net/npm/fomantic-ui@2.8.7/dist/semantic.css">
-    <script src="https://cdn.jsdelivr.net/npm/fomantic-ui@2.8.7/dist/semantic.js"></script>
+  <meta charset="utf-8">
+  <title>User History of Accesses</title>
+  <link href="https://fonts.googleapis.com/css?family=Ropa+Sans" rel="stylesheet">
+  <!-- Fomantic UI -->
+  <script src="https://cdn.jsdelivr.net/npm/jquery@3.3.1/dist/jquery.min.js"></script>
+  <link rel="stylesheet" type="text/css" href="https://cdn.jsdelivr.net/npm/fomantic-ui@2.8.7/dist/semantic.css">
+  <link rel="stylesheet" type="text/css" href="/static/style.css">
+  <script src="https://cdn.jsdelivr.net/npm/fomantic-ui@2.8.7/dist/semantic.js"></script>
+
 </head>
-
-
-
 <body>
+  <h1>User Web App</h1>
+  <h2>History of attempts by you</h2>
   <div style="margin: auto;width: 25%;padding: 10px;">
-    <h2 class="ui header">History of attempts by you</h2>
     <table class="ui single line table">
       <thead>
        <tr>
@@ -21,12 +24,11 @@
       <tbody>
         {% for col in history %}
            <tr>
-              <td>{{ col.gateID         }}</td>
+              <td>{{ col.gateID    }}</td>
               <td>{{ col.date      }}</td>
            </tr>
         {% endfor %}
       </tbody>
   </div>
-  
 </body>
 </html>

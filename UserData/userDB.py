@@ -160,7 +160,6 @@ def updateSecretUsed( id ):
 
 #Updates the secret an existent user
 def updateSecret( id, secret ):
-
     # Verify if the secret has correct length. If not, this secret is not valid
     if len(secret) != SECRET_LEN:
         return -2

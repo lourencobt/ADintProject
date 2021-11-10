@@ -26,11 +26,14 @@ import os
 from requests_oauthlib import OAuth2Session
 from flask import Flask, render_template, request, abort, redirect, session, url_for
 from flask.json import jsonify
+import json
 import datetime 
 import requests
+from sqlalchemy.sql.functions import user
+from flask_qrcode import QRcode
 
 GATEDATASERVICE = "http://localhost:8000/"
-USERDATASERVICE = "http://127.0.0.1:8001/"
+USERDATASERVICE = "http://localhost:8002/"
 SECRET_LEN = 4
 
 import random
@@ -50,180 +53,248 @@ def raise_error(errorNumber, errorDescription):
     return {"error": errorNumber, "errorDescription":errorDescription}
 
 
+def validate_session():
+    # Verify if session token is still valid
+    try:
+        istID = session['istID']
+    except:
+        return "Error: You are not logged in"
 
-app = Flask(__name__)
+    # Get user info to verify if user already exists
+    try:
+        r = requests.get(USERDATASERVICE + "API/users/{}".format(istID))
+    except:
+        return "Server is down for the moment. Try again later."
 
-# * User Web App Endpoints implementation
-# WEB
+    if r.status_code == 200:
+        try:
+            error = r.json()["error"]
+        except:
+            return "Error: Something went wrong in Server Response"
+        
+        if error != 0:
+            return  "Error: Something went wrong in Server Response"
+    else:
+        return "Error: Server not working correctly. Contact Admin"
 
+    try:
+        user_token = r.json()["userInfo"]["token"]
+    except:
+        return "Error: Something went wrong in Server Response"
+
+    # Verify if session token is still valid
+    try:
+        istID = session['istID']
+    except:
+        return "Error: You are not logged in"
+
+    # Get user info to verify if user already exists
+    try:
+        r = requests.get(USERDATASERVICE + "API/users/{}".format(istID))
+    except:
+        return "Server is down for the moment. Try again later."
+
+    if r.status_code == 200:
+        try:
+            error = r.json()["error"]
+        except:
+            return "Error: Something went wrong in Server Response"
+        
+        if error != 0:
+            return  "Error: Something went wrong in Server Response"
+    else:
+        return "Error: Server not working correctly. Contact Admin"
+
+    try:
+        user_token = r.json()["userInfo"]["token"]
+    except:
+        return "Error: Something went wrong in Server Response"
+
+    # if session token is valid
+    if session['token'] == user_token:
+        return True
 
 #Information about my application in fenix
-client_id = "570015174623409"
-client_secret = "iS/R8Kk5GeQCg7tiDoJnmvWBWM2QYthKaRvcVILPdH8hQhnNCgQ8awJVMM1/fCCzUqClFFyKZnQeW7frIyAV6w=="
+client_id = "570015174623415"
+client_secret = "mE5JDJz+G53JEJBrYeSX2dD5YaMysnCqNykmvjd4mAWI3VuyGbnzSlgjIkCw36rn7ANvzYVy0YJ+4SNwJlUJxQ=="
 authorization_base_url = 'https://fenix.tecnico.ulisboa.pt/oauth/userdialog'
 token_url = 'https://fenix.tecnico.ulisboa.pt/oauth/access_token'
 
-@app.route("/")
-def demo():
+app = Flask(__name__)
+QRcode(app)
+
+# * User Web App Endpoints implementation
+# WEB
+@app.route("/userApp/WEB/login")
+def authorization():
     #User Authorization.
     #Redirect the user/resource owner to the OAuth provider (i.e. fenix)
     #using an URL with a few key OAuth parameters.
     
-    fenix = OAuth2Session(client_id, redirect_uri="http://localhost:5000/callback")
+    fenix = OAuth2Session(client_id, redirect_uri="http://localhost:8001/callback")
     authorization_url, state = fenix.authorization_url(authorization_base_url)
 
     # State is used to prevent CSRF, keep this for later.
     session['oauth_state'] = state
     return redirect(authorization_url)
 
-# Step 2: User authorization, this happens on the provider.
-
 @app.route("/callback")
 def callback():
     
     # Step 3: Retrieving an access token.
-
     fenix = OAuth2Session(client_id, state=session['oauth_state'], 
-    redirect_uri="http://localhost:5000/callback")
+        redirect_uri="http://localhost:8001/callback")
     
     token = fenix.fetch_token(token_url, client_secret=client_secret,
                                authorization_response=request.url)
 
-    # At this point you can fetch protected resources but lets save
-    # the token and show how this is done from a persisted token
-    # in /profile.
     session['oauth_token'] = token
+    session['token'] = token['access_token']
+    userinfo = fenix.get('https://fenix.tecnico.ulisboa.pt/api/fenix/v1/person').json()
+    session['istID'] = userinfo["username"]
 
-    userinfo = fenix.get(
-        'https://fenix.tecnico.ulisboa.pt/api/fenix/v1/person').json()
 
-    token = session['oauth_token']["access_token"]
+    token = session['token']
+    istID = session['istID']
 
-    body = {"istID" : userinfo["username"], "token" : token}
+    body = {"istID" : istID, "token" : token}
 
+    # First get user info to verify if user already exists
     try:
-        r = requests.post( USERDATASERVICE + "API/users", json = body)
+        r = requests.get(USERDATASERVICE + "API/users/{}".format(istID))
     except:
         return "Server is down for the moment. Try again later."
 
     if r.status_code == 200:
-        
         try:
             error = r.json()["error"]
         except:
             return "Error: Something went wrong in Server Response"
         
-        if error == 0:
-            return redirect("/homepage")
-
-        elif error == 12:
-            r = requests.post( USERDATASERVICE + "API/users", json = body)
-            return redirect("/homepage")
-
-        else:
-            return  "Error: Something happened with your account. Contact Admin"
+        if error != 0:
+            return  "Error: Something went wrong in Server Response"
     else:
         return "Error: Server not working correctly. Contact Admin"
 
+    # If user doesn't exist, create it
+    if r.json()["userInfo"] == None:
+        try:
+            r = requests.post( USERDATASERVICE + "API/users", json = body)
+        except:
+            return "Server is down for the moment. Try again later."
 
-@app.route("/homepage", methods=["GET"])
-def homePage():
+        if r.status_code == 200:
+            try:
+                error = r.json()["error"]
+            except:
+                return "Error: Something went wrong in Server Response"
+            if error == 0:
+                return redirect("/userApp/WEB")
+            else:
+                return  "Error: Something happened with your account. Contact Admin"
+        else:
+            return "Error: Server not working correctly. Contact Admin"
+    else: #If user already exist, actualize its information
+        try:
+            r = requests.post( USERDATASERVICE + "API/users/{}/token".format(istID), json ={"token": token})
+        except:
+            return "Server is down for the moment. Try again later."
+
+        if r.status_code == 200:
+            try:
+                error = r.json()["error"]
+            except:
+                return "Error: Something went wrong in Server Response"
+            if error != 0:
+                return  "Error: Something went wrong in Server Response"
+        else:
+            return "Error: Server not working correctly. Contact Admin"
+        
+        return redirect("/userApp/WEB")
     
-    fenix = OAuth2Session(client_id, token=session['oauth_token'])
+@app.route("/userApp/WEB", methods=["GET"])
+def homepage():
+    try:
+        istID = session['istID']
+    except:
+        return "Error: You are not logged in"
+    return render_template("homePage.html" , username = istID)
 
-    return render_template("homePage.html" , username = fenix.get(
-        'https://fenix.tecnico.ulisboa.pt/api/fenix/v1/person').json()["name"])
-
-
-    
-@app.route("/QRCode", methods=["GET"])
+@app.route("/userApp/WEB/QRCode", methods=["GET"])
 def qrcodeRequest():
-
-    fenix = OAuth2Session(client_id, token=session['oauth_token'])
-
-    username = fenix.get(
-        'https://fenix.tecnico.ulisboa.pt/api/fenix/v1/person').json()["username"]
-
-
-    body = {'istID': username, 'secret': generate_code()}
-
-    try:
-        r = requests.post( USERDATASERVICE + "API/users/"+ username +"/secret", json = body)
-    except:
-        return "error"
-
-    if r.status_code == 200:
     
-        try:
-            error = r.json()["error"]
-        except:
-            return "Error: Something went wrong in Server Response"
-        
-        if error == 0:
-            return render_template("qrcode.html", code = body)
+    try:
+        istID = session['istID']
+    except:
+        return "Error: You are not logged in"
 
-        elif error > 0:
+    # Verify if session token is still valid
+    result = validate_session()
+
+    if result == True:
+        qrcode_data= {'istID': istID, 'secret': generate_code()}
+
+        # Update secret to the most recent one
+        # If successful render qrcode
+        try:
+            r = requests.post( USERDATASERVICE + "API/users/"+ istID +"/secret", json = qrcode_data)
+        except:
+            return "Server is down for the moment. Try again later."
+
+        if r.status_code == 200:
             try:
-                errorDescription = r.json()["errorDescription"]
+                error = r.json()["error"]
             except:
                 return "Error: Something went wrong in Server Response"
             
-            return "Error: " + errorDescription
-            
-        elif r.status_code == 400:
-            return "Error: Inserted information not in the correct format"
+            if error == 0:
+                return render_template("qrcode.html", code = json.dumps(qrcode_data))
+            elif error != 0:
+                "Error: Server not working correctly. Contact Admin"  
+            elif r.status_code == 400:
+                return "Error: Inserted information not in the correct format"
+            else:
+                return "Error: Server not working correctly. Contact Admin"  
         else:
             return "Error: Server not working correctly. Contact Admin"  
+    else:
+        return "Error: You need to be logged in."
 
-    return render_template("qrcode.html", code = body)
-    
-    
-@app.route("/userHistory", methods=["GET"])
+@app.route("/userApp/WEB/history", methods=["GET"])
 def userHistoryRequest():
-
-    fenix = OAuth2Session(client_id, token=session['oauth_token'])
-
-    username = fenix.get(
-        'https://fenix.tecnico.ulisboa.pt/api/fenix/v1/person').json()["username"]
-
     try:
-        r = requests.get( USERDATASERVICE + "API/users/"+ username +"/history")
+        istID = session['istID']
     except:
-        return "error"
+        return "Error: You are not logged in"
 
-    if r.status_code == 200:
-    
+    # Verify if session token is still valid
+    result = validate_session()
+
+    if result == True:
+        # Get user history and render it
         try:
-            error = r.json()["error"]
+            r = requests.get( USERDATASERVICE + "API/users/"+ istID +"/history")
         except:
-            return "Error: Something went wrong in Server Response"
-        
-        if error == 0:
-            try:
-                history = r.json()["historyList"]
-            except:
-                return "Error: Something went wrong in Server Response"
-            
-            return render_template("userHistory.html" , history = history )
+            return "Server is down for the moment. Try again later."
 
-        elif error > 0:
+        if r.status_code == 200:
             try:
-                errorDescription = r.json()["errorDescription"]
+                error = r.json()["error"]
             except:
                 return "Error: Something went wrong in Server Response"
-            
-            return "Error: " + errorDescription
-            
-        elif r.status_code == 400:
-            return "Error: Inserted information not in the correct format"
+            if error == 0:
+                try:
+                    history = r.json()["historyList"]
+                except:
+                    return "Error: Something went wrong in Server Response"
+                
+                return render_template("userHistory.html" , history = history )
+            elif error > 0:
+                return "Error: Server not working correctly. Contact Admin"  
         else:
             return "Error: Server not working correctly. Contact Admin"  
-
-    
-
-    
-
-
+    else:
+        return "Error: You need to be logged in."
 
 
 # * Gate Web App + Service Endpoints implementation
@@ -278,9 +349,7 @@ def gateApp():
 # for the Gate to verify if a code is valid
 @app.route("/gateApp/API/gates/<path:gateID>/code", methods=['POST'])
 def verifyCode(gateID):
-    print(session["gateSecret"])
     data = request.json
-    print(data)
     try:
         istID = data["istID"]
         gateSecret = session["gateSecret"]
@@ -288,23 +357,46 @@ def verifyCode(gateID):
     except:
         abort(400)
 
-    JoaoCode = {}
-    JoaoCode['code'] = "qmsj"
-    JoaoCode['datetime'] = datetime.datetime.now()
+    # First get user info to get the user secret
+    try:
+        r = requests.get(USERDATASERVICE + "API/users/{}".format(istID))
+    except:
+        return "Server is down for the moment. Try again later."
 
-     # TODO: Verify there is such a code and if it is still valid
-    if inserted_code == JoaoCode['code']:
+    if r.status_code == 200:
+        try:
+            error = r.json()["error"]
+        except:
+            return "Error: Something went wrong in Server Response"
+        
+        if error != 0:
+            return  "Error: Something went wrong in Server Response"
+    else:
+        return "Error: Server not working correctly. Contact Admin"
+
+    try:
+        userInfo = r.json()["userInfo"]
+    except:
+        return "Error: Something went wrong in Server Response"
+
+    if userInfo == None:
+        return "Error: User not registered"
+    
+    verificationDate = datetime.datetime.now()
+     # Verify there is such a code and if it is still valid
+    if userInfo["valid"] == True and inserted_code == userInfo["secret"]:
         # Code becomes invalid after 1 minute of creation
-        verificationDate = datetime.datetime.now()
-        if verificationDate - JoaoCode["datetime"] > datetime.timedelta(minutes = 1):
+        secretDate = datetime.datetime.fromisoformat(userInfo["dateSecret"])
+
+        if verificationDate - secretDate > datetime.timedelta(minutes = 1):
             return {
                 "valid": False, 
                 "error": 0
             }
         else:
+            # Post to gate history
             try:
-                r = requests.post(GATEDATASERVICE+"/API/gates/access", json={"gateID": gateID, "gateSecret": gateSecret,"success": True, "dateTime": str(verificationDate)} )
-                # TODO: Missing post to user history
+                r = requests.post(GATEDATASERVICE+"API/gates/access", json={"gateID": gateID, "gateSecret": gateSecret,"success": True, "dateTime": str(verificationDate)} )
             except:
                 return raise_error(7, "Couldn't Reach GateDataService")
             
@@ -314,21 +406,85 @@ def verifyCode(gateID):
                 except:
                     return raise_error(8, "Incorrect GateDataService response")
 
-                if error == 0:
-                    return {
-                        "valid": True,
-                        "error": 0
-                    }
-                elif error != 0:
+                if error != 0:
                     try:
                         errorDescription = r.json()["errorDescription"]
                     except:
                         return raise_error(8, "Incorrect GateDataService response")
             
                     return raise_error(error, errorDescription)
+
+            # Post to User history
+            try:
+                r = requests.post(USERDATASERVICE+"API/users/access", json={"istID": istID, "gateID": gateID, "date": str(verificationDate)} )
+            except:
+                return raise_error(7, "Couldn't Reach UserDataService")
+            
+            if r.status_code == 200:
+                try:
+                    error = r.json()["error"]
+                except:
+                    return raise_error(8, "Incorrect UserDataService response")
+
+                if error != 0:
+                    try:
+                        errorDescription = r.json()["errorDescription"]
+                    except:
+                        return raise_error(8, "Incorrect UserDataService response")
+            
+                    return raise_error(error, errorDescription)
+            
+            # Invalidate Secret
+            try:
+                r = requests.post(USERDATASERVICE+"API/users/{}/invalid".format(istID) )
+            except:
+                return raise_error(7, "Couldn't Reach UserDataService")
+            
+            if r.status_code == 200:
+                try:
+                    error = r.json()["error"]
+                except:
+                    return raise_error(8, "Incorrect UserDataService response")
+
+                if error != 0:
+                    try:
+                        errorDescription = r.json()["errorDescription"]
+                    except:
+                        return raise_error(8, "Incorrect UserDataService response")
+            
+                    return raise_error(error, errorDescription)
+
             else:
                 abort(r.status_code)
+            
+            return {
+                        "valid": True,
+                        "error": 0
+                    }
     else:
+        # Post to gate history
+        try:
+            r = requests.post(GATEDATASERVICE+"API/gates/access", json={"gateID": gateID, "gateSecret": gateSecret,"success": False, "dateTime": str(verificationDate)} )
+        except:
+            return raise_error(7, "Couldn't Reach GateDataService")
+        
+        if r.status_code == 200:
+            try:
+                error = r.json()["error"]
+            except:
+                return raise_error(8, "Incorrect GateDataService response")
+
+            if error != 0:
+                try:
+                    errorDescription = r.json()["errorDescription"]
+                except:
+                    return raise_error(8, "Incorrect GateDataService response")
+        
+                return raise_error(error, errorDescription)
+        else:
+            abort(r.status_code)
+            
+
         return {
                 "valid": False, 
                 "error": 0
@@ -502,5 +658,4 @@ if __name__ == "__main__":
 
     os.environ['OAUTHLIB_INSECURE_TRANSPORT'] = "1"
     app.secret_key = os.urandom(24)
-    app.run(debug=True, host = "localhost", port = "5000")
-    #app.run(host='0.0.0.0', port=8001, debug=True)
+    app.run(host='0.0.0.0', port=8001, debug=True)

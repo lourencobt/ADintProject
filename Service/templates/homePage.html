@@ -1,22 +1,35 @@
+<html>
+<head>
+  <meta charset="utf-8">
+  <title>QRCode Generator</title>
+  <link href="https://fonts.googleapis.com/css?family=Ropa+Sans" rel="stylesheet">
+  <!-- Fomantic UI -->
+  <script src="https://cdn.jsdelivr.net/npm/jquery@3.3.1/dist/jquery.min.js"></script>
+  <link rel="stylesheet" type="text/css" href="https://cdn.jsdelivr.net/npm/fomantic-ui@2.8.7/dist/semantic.css">
+  <link rel="stylesheet" type="text/css" href="/static/style.css">
+  <script src="https://cdn.jsdelivr.net/npm/fomantic-ui@2.8.7/dist/semantic.js"></script>
 
-
-Welcome {{username}}:
-
-
-<p>
-    User History:
-    <p>
-        <a href="http://localhost:5000/userHistory">
-            <input type="button" value="History" />
-         </a>
-    </p>
-    Generate QR Code:
-    <p>
-        <a href="http://localhost:5000/QRCode">
-           <input type="button" value="QR Code" />
-        </a>
-    </p>
-
-</p>
- 
- 
+</head>
+<body>
+  <h1>User Web App</h1>
+  <h2>Welcome {{username}}</h2>
+  <div style="margin: auto;width: 50%;padding: 10px;display: table;">
+    
+    <div style="display: table-row">
+        <div style="display: table-cell;">
+            <h4 class="ui header">Generate QR Code</h4>         
+            <a href="http://localhost:8001/userApp/WEB/QRCode">
+                <button class="ui button">QR Code</button>
+            </a>
+        </div>
+        
+        <div style="width:50%; display: table-cell;">
+            <h4 class="ui header">User History</h4>         
+            <a href="http://localhost:8001/userApp/WEB/history">
+                <button class="ui button">History</button>
+            </a>
+        </div>
+    </div>
+</div>
+</body>
+</html>

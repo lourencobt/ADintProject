@@ -20,14 +20,13 @@
 #13 → That is not a valid user
 #14 → No history for this user
 #15 → Gate doesn't exist
-#16 → Date doesn't exist
 
 # Imports
 from flask import Flask, render_template, request, abort
 from flask import json
 from flask.json import jsonify
 from sqlalchemy import exc
-from userDB import listHistory, listUserHistory, newHistory, updateSecret , newUser, userInfor, updateToken, updateSecretUsed
+from userDB import listHistory, listUserHistory, listUsersId, newHistory, updateSecret , newUser, userInfor, updateToken, updateSecretUsed
 import random
 from datetime import datetime
 
@@ -52,10 +51,6 @@ def raise_error(errorNumber, errorDescription):
     return {"error": errorNumber, "errorDescription":errorDescription}
 
 
-#Functions not defined in "Try Notion"!!!
-#Features are defined before functions and their porpuse are 
-# #to help with other aspects and manipulate the database
-
 #Creates the token for the session
 #Changes the previous token if exists already and 
 #changes the validation of the token to True
@@ -70,9 +65,9 @@ def updatToken(istID):
         abort(400)
 
     if (error := updateToken( id , token )) == 0:
-            return { 
-                "error": 0
-            }
+        return { 
+            "error": 0
+        }
     elif error == -1:
         return raise_error(13,"This is not a valid user")
     else:
@@ -82,17 +77,17 @@ def updatToken(istID):
 #The user must exist in order to create this QRCode
 @app.route("/API/users/<path:istID>/secret", methods=['POST'])
 def updateSecretUser(istID):
-
     data = request.json
     try:
         id = istID
         secret = data["secret"]
     except:
         abort(400)
-    if (error := updateSecret( id,secret)) == 0:
-            return { 
-                "error": 0
-            }
+
+    if (error := updateSecret(id,secret)) == 0:
+        return { 
+            "error": 0
+        }
     elif error == -1:
         return raise_error(13,"That is not a valid user")
     elif error == -2:
@@ -100,8 +95,7 @@ def updateSecretUser(istID):
     else:
         return raise_error(1,"Something happened!")
     
-#Put the token in invalid mode
-#Change the boolean to False
+
 @app.route("/API/users/<path:istID>/invalid", methods=['POST'])
 def updateAccessInvalid(istID):
 
@@ -121,12 +115,6 @@ def updateAccessInvalid(istID):
         return raise_error(10,"Data sent in request was not valid to insert in database")
     else:
         return raise_error(1,"Something happened!")
-
-
-
-#Functions defined in "Try Notion"!!!
-#Supposly they are complete but they need a few features
-#Check them!!!!!!!!!!!!!!!!!!!
 
 @app.route("/API/users", methods=['POST'])
 def resgistNewUser():
@@ -164,13 +152,11 @@ def getUserInfo(istID):
                         "secret": userInfo.secret,
                         "token": userInfo.token, 
                         "valid": userInfo.valid,
-                        "userSecret" : userInfo.datesecret
+                        "dateSecret" : str(userInfo.datesecret)
                         },
             "error": 0
         }
         
-        
-    
 #Get all the history from a specific user
 @app.route("/API/users/<path:istID>/history")
 def getHistory(istID):
@@ -201,22 +187,17 @@ def postHistory():
 
     try:
         istID = data["istID"]
-        gateID = data["gateID"]
-        date = data["date"]
+        gateID = int(data["gateID"])
+        date = datetime.fromisoformat(data["date"])
     except:
         abort(400)
-
-    try:
-        date = datetime.strptime(date,"%d/%m/%y %H:%M")
-    except:
-        return raise_error(16,"Date not valid : format -> dd/mm/yy HH:MM")
 
     if (error := newHistory(istID,gateID,date)) == 0:
             return { 
                 "error": 0
             }
     elif error == -1:
-        return raise_error(11,"Arguments to create a new user are not in the correct format")
+        return raise_error(11,"Arguments to create a new history are not in the correct format")
     elif error == -2:
         return raise_error(15,"Gate doesn't exist")
     elif error == -3:
@@ -225,8 +206,6 @@ def postHistory():
         return raise_error(10,"Data sent in request was not valid to insert in database")
     else:
         return raise_error(1,"Something happened!")
-
-    return 
-
+  
 if __name__ == "__main__":
-    app.run(port=8001, debug=True)
+    app.run(host='0.0.0.0',port=8002, debug=True)
