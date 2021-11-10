@@ -17,7 +17,7 @@
 # Imports
 import os
 from requests_oauthlib import OAuth2Session
-from flask import Flask, render_template, request, abort, redirect, session, url_for
+from flask import Flask, config, render_template, request, abort, redirect, session, url_for
 from flask.json import jsonify
 import json
 import datetime 
@@ -133,82 +133,9 @@ def authorization():
 
     # State is used to prevent CSRF, keep this for later.
     session['oauth_state'] = state
+    session['admin'] = False
     return redirect(authorization_url)
-
-@app.route("/callback")
-def callback():
-    
-    # Step 3: Retrieving an access token.
-    fenix = OAuth2Session(client_id, state=session['oauth_state'], 
-        redirect_uri="http://localhost:8001/callback")
-    
-    token = fenix.fetch_token(token_url, client_secret=client_secret,
-                               authorization_response=request.url)
-
-    session['oauth_token'] = token
-    session['token'] = token['access_token']
-    userinfo = fenix.get('https://fenix.tecnico.ulisboa.pt/api/fenix/v1/person').json()
-    session['istID'] = userinfo["username"]
-
-
-    token = session['token']
-    istID = session['istID']
-
-    body = {"istID" : istID, "token" : token}
-
-    # First get user info to verify if user already exists
-    try:
-        r = requests.get(USERDATASERVICE + "API/users/{}".format(istID))
-    except:
-        return "Server is down for the moment. Try again later."
-
-    if r.status_code == 200:
-        try:
-            error = r.json()["error"]
-        except:
-            return "Error: Something went wrong in Server Response"
-        
-        if error != 0:
-            return  "Error: Something went wrong in Server Response"
-    else:
-        return "Error: Server not working correctly. Contact Admin"
-
-    # If user doesn't exist, create it
-    if r.json()["userInfo"] == None:
-        try:
-            r = requests.post( USERDATASERVICE + "API/users", json = body)
-        except:
-            return "Server is down for the moment. Try again later."
-
-        if r.status_code == 200:
-            try:
-                error = r.json()["error"]
-            except:
-                return "Error: Something went wrong in Server Response"
-            if error == 0:
-                return redirect("/userApp/WEB")
-            else:
-                return  "Error: Something happened with your account. Contact Admin"
-        else:
-            return "Error: Server not working correctly. Contact Admin"
-    else: #If user already exist, actualize its information
-        try:
-            r = requests.post( USERDATASERVICE + "API/users/{}/token".format(istID), json ={"token": token})
-        except:
-            return "Server is down for the moment. Try again later."
-
-        if r.status_code == 200:
-            try:
-                error = r.json()["error"]
-            except:
-                return "Error: Something went wrong in Server Response"
-            if error != 0:
-                return  "Error: Something went wrong in Server Response"
-        else:
-            return "Error: Server not working correctly. Contact Admin"
-        
-        return redirect("/userApp/WEB")
-    
+  
 @app.route("/userApp/WEB", methods=["GET"])
 def homepage():
     try:
@@ -623,7 +550,117 @@ def accessHistoryOfSomeGate(gateID):
             return "Error: " + errorDescription
     else:
         return "Error: Server not working correctly. Contact Admin"
+
+@app.route("/adminApp/WEB/login")
+def authorizationAdmin():
+    #User Authorization.
+    #Redirect the user/resource owner to the OAuth provider (i.e. fenix)
+    #using an URL with a few key OAuth parameters.
+    
+    fenix = OAuth2Session(client_id, redirect_uri="http://localhost:8001/callback")
+    authorization_url, state = fenix.authorization_url(authorization_base_url)
+
+    # State is used to prevent CSRF, keep this for later.
+    session['oauth_state'] = state
+    session['admin'] = True
+    return redirect(authorization_url)
+
+
+#Call back must be the same to both apps 
+@app.route("/callback")
+def callback():
+    
+    # Step 3: Retrieving an access token.
+    fenix = OAuth2Session(client_id, state=session['oauth_state'], 
+        redirect_uri="http://localhost:8001/callback")
+    
+    token = fenix.fetch_token(token_url, client_secret=client_secret,
+                               authorization_response=request.url)
+
+    session['oauth_token'] = token
+    session['token'] = token['access_token']
+    userinfo = fenix.get('https://fenix.tecnico.ulisboa.pt/api/fenix/v1/person').json()
+    session['istID'] = userinfo["username"]
+
+
+    token = session['token']
+    istID = session['istID']
+
+    body = {"istID" : istID, "token" : token}
+
+    # First get user info to verify if user already exists
+    try:
+        r = requests.get(USERDATASERVICE + "API/users/{}".format(istID))
+    except:
+        return "Server is down for the moment. Try again later."
+
+    if r.status_code == 200:
+        try:
+            error = r.json()["error"]
+        except:
+            return "Error: Something went wrong in Server Response"
+        
+        if error != 0:
+            return  "Error: Something went wrong in Server Response"
+    else:
+        return "Error: Server not working correctly. Contact Admin"
+
+    # If user doesn't exist, create it
+    if r.json()["userInfo"] == None:
+        try:
+            r = requests.post( USERDATASERVICE + "API/users", json = body)
+        except:
+            return "Server is down for the moment. Try again later."
+
+        if r.status_code == 200:
+            try:
+                error = r.json()["error"]
+            except:
+                return "Error: Something went wrong in Server Response"
+            if error == 0:
+                return redirect("/userApp/WEB")
+            else:
+                return  "Error: Something happened with your account. Contact Admin"
+        else:
+            return "Error: Server not working correctly. Contact Admin"
+    else: #If user already exist, actualize its information
+        try:
+            r = requests.post( USERDATASERVICE + "API/users/{}/token".format(istID), json ={"token": token})
+        except:
+            return "Server is down for the moment. Try again later."
+
+        if r.status_code == 200:
+            try:
+                error = r.json()["error"]
+            except:
+                return "Error: Something went wrong in Server Response"
+            if error != 0:
+                return  "Error: Something went wrong in Server Response"
+        else:
+            return "Error: Server not working correctly. Contact Admin"
+        
+        if session['admin']:
+            #verify if ist in config.json
+            with open('config.json') as f:
+                data = json.load(f)
+            admins = data['admins']
+            for admin in admins:
+                if admin == istID:
+                    return redirect("/adminApp/WEB")
+            
+            return "Error: you have no admin access!!!"
+                
+        else:
+            return redirect("/userApp/WEB")
    
+@app.route("/adminApp/WEB", methods=["GET"])
+def homepageadmin():
+    try:
+        istID = session['istID']
+    except:
+        return "Error: You are not logged in"
+    return render_template("homePageAdmin.html" , username = istID)
+
 if __name__ == "__main__":
 
     os.environ['OAUTHLIB_INSECURE_TRANSPORT'] = "1"
