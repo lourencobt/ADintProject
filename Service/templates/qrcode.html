@@ -1,17 +1,19 @@
-<script src="https://cdn.rawgit.com/davidshimjs/qrcodejs/gh-pages/qrcode.min.js"></script>
-
-
 <html>
-    <head>
+<head>
+  <meta charset="utf-8">
+  <title>QRCode Generator</title>
+  <link href="https://fonts.googleapis.com/css?family=Ropa+Sans" rel="stylesheet">
+  <!-- Fomantic UI -->
+  <script src="https://cdn.jsdelivr.net/npm/jquery@3.3.1/dist/jquery.min.js"></script>
+  <link rel="stylesheet" type="text/css" href="https://cdn.jsdelivr.net/npm/fomantic-ui@2.8.7/dist/semantic.css">
+  <link rel="stylesheet" type="text/css" href="/static/style.css">
+  <script src="https://cdn.jsdelivr.net/npm/fomantic-ui@2.8.7/dist/semantic.js"></script>
 
-        <script type="text/javascript" src="app.js"></script>
-
-             <div id="qrcode"></div>
-             <script type="text/javascript">
-
-     
-             new QRCode(document.getElementById("qrcode"), "{{code}}" );
-        </script>
-
-    </head>
+</head>
+<body>
+  <h1>User Web App</h1>
+  <a id="Link" href="https://pypi.org/project/Flask-QRcode/">View documentation on pypi.org</a>
+  <h2>Show QRCode</h2>
+  <div><img src="{{ qrcode(code) }}"></div>
+</body>
 </html>
