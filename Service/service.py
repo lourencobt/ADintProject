@@ -25,6 +25,10 @@ import requests
 from sqlalchemy.sql.functions import user
 from flask_qrcode import QRcode
 
+import sys
+sys.path.insert(1, "../GateData")
+from gateData import getGates, getHistoryofSomeGate
+
 GATEDATASERVICE = "http://localhost:8000/"
 USERDATASERVICE = "http://localhost:8002/"
 SECRET_LEN = 4
@@ -244,8 +248,6 @@ def qrcodeRequest():
                 return render_template("qrcode.html", code = json.dumps(qrcode_data))
             elif error != 0:
                 "Error: Server not working correctly. Contact Admin"  
-            elif r.status_code == 400:
-                return "Error: Inserted information not in the correct format"
             else:
                 return "Error: Server not working correctly. Contact Admin"  
         else:
@@ -282,7 +284,7 @@ def userHistoryRequest():
                     return "Error: Something went wrong in Server Response"
                 
                 return render_template("userHistory.html" , history = history )
-            elif error > 0:
+            elif error != 0:
                 return "Error: Server not working correctly. Contact Admin"  
         else:
             return "Error: Server not working correctly. Contact Admin"  
@@ -533,12 +535,11 @@ def completeForm():
 # show a table with gates info (id, location, secret, activations)
 @app.route("/adminApp/WEB/gates")
 def allGatesAvailable():
-    try:
-        r = requests.get(GATEDATASERVICE+"/API/gates")
-    except:
-        return "Server is down for the moment. Try again later."
+    r = getGates()
 
-    if r.status_code == 200:
+    if r == -1:
+        return "Error: Server not working correctly. Contact Admin"
+    elif r.status_code == 200:
         try:
             error = r.json()["error"]
         except:
@@ -596,10 +597,10 @@ def accessHistoryAllGates():
 # anonimized history of every attempt to open a specific gate
 @app.route("/adminApp/WEB/history/<path:gateID>")
 def accessHistoryOfSomeGate(gateID):
-    try:
-        r = requests.get(GATEDATASERVICE+"/API/gates/{}/history".format(gateID))
-    except:
-        return "Server is down for the moment. Try again later."
+    r = getHistoryofSomeGate(gateID)
+
+    if r == -1:
+        return "Error: Server not working correctly. Contact Admin"
 
     if r.status_code == 200:
         try:
