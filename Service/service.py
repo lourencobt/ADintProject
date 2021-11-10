@@ -1,12 +1,5 @@
 
-# * Intermediate Version of the project
-# * This program has 2 purposes. It consist in the service + adminWebApp
-# *     - Service:
-# *         is composed of a set of REST endpoints that allow UserApp
-# *         and GateApp to interact with the system
-# *     - AdminWebApp:
-# *         composed by two web pages, one for "Registration of a new gate" 
-# *         and the other for "Listing registered gates"
+# * Implementation of UserWebApp, GateWebApp and AdminWebApp
 
 ## Errors
 # 0 → No error
@@ -492,7 +485,6 @@ def verifyCode(gateID):
 
 
 # * Admin Web App Endpoints implementation
-
 @app.route("/adminApp/WEB/createGate", methods=["GET","POST"])
 def completeForm():
     if request.method == "GET":
@@ -631,28 +623,6 @@ def accessHistoryOfSomeGate(gateID):
             return "Error: " + errorDescription
     else:
         return "Error: Server not working correctly. Contact Admin"
-
-
-# Intermediary Version
-
-# * Service Endpoints implementation
-
-# for the UserApp to retrieve a new user code
-@app.route("/API/users/<path:username>/code")
-def getNewCode(username):
-    if username != "joao":
-        abort(404)
-
-    # Invalidate last code if still valid
-    code = generate_code()
-
-    #JoaoCode['code'] = code
-    #JoaoCode['datetime'] = datetime.datetime.now()
-
-    return {
-        "code": code, 
-        "error": 0
-    }
    
 if __name__ == "__main__":
 
