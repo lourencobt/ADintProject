@@ -110,7 +110,11 @@ def newHistory(gateId, success, attemptDate):
     else:
         records = history(gateId = gateId, success = success, attemptDate = attemptDate)
         session.add(records)
-        session.commit()
+        try:
+            session.commit()
+        except:
+            session.rollback()
+            return -3
 
         return 0
 

@@ -72,44 +72,10 @@
           outputData.parentElement.hidden = false;
 
           stop = 1
-          let text = code.data;
           
           try
           {
-            const obj = JSON.parse(text);
-            console.log(obj.secret);  
-            $.ajax({
-              url: "/gateApp/API/gates/{{ gateID }}/code",
-              type: "POST",
-              dataType: "json",
-              contentType: 'application/json',
-              data: text,
-              success: function(data)
-              {
-                console.log(data)
-                // ask professor if there is the need to verify data here
-                if(data.valid == true)
-                {
-                  outputContainer.style.background = "rgb(0, 226, 87)";
-                  outputData.innerText = code.data + "\n" + "You can enter";
-                  setTimeout(function(){
-                    outputContainer.style.background = "#eee";
-                    stop = 0;
-                    requestAnimationFrame(tick);
-                  }, 6000)
-                }
-                else
-                {
-                  outputData.innerText = code.data + "\n" + "You can't enter";
-                  outputContainer.style.background = "rgb(167, 0, 0)";
-                  setTimeout(function(){
-                    outputContainer.style.background = "#eee";
-                    stop = 0;
-                    requestAnimationFrame(tick);
-                  }, 2000)
-                } 
-              }
-            });
+            request(code);
           }
           catch(e)
           {
@@ -125,6 +91,46 @@
       {
         requestAnimationFrame(tick);
       }
+    }
+    
+    function request(code) {
+      let text = code.data;
+      const obj = JSON.parse(text);
+
+      $.ajax({
+        url: "/gateApp/API/gates/{{ gateID }}/code",
+        type: "POST",
+        dataType: "json",
+        contentType: 'application/json',
+        data: text,
+        success: function(data)
+        {
+          if(data.error == 0 && data.valid == true)
+          {
+            outputContainer.style.background = "rgb(0, 226, 87)";
+            outputData.innerText = code.data + "\n" + "You can enter";
+            setTimeout(function(){
+              outputContainer.style.background = "#eee";
+              stop = 0;
+              requestAnimationFrame(tick);
+            }, 6000)
+          }
+          else if (data.error == 10)
+          {
+            request()
+          }
+          else
+          {
+            outputData.innerText = code.data + "\n" + "You can't enter";
+            outputContainer.style.background = "rgb(167, 0, 0)";
+            setTimeout(function(){
+              outputContainer.style.background = "#eee";
+              stop = 0;
+              requestAnimationFrame(tick);
+            }, 2000)
+          } 
+        }
+      });
     }
   </script>
 </body>

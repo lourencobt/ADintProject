@@ -168,8 +168,9 @@ def addAccess():
             return {
                 "error": 0
             }
-        elif error == -1 or error == -2:
+        elif error == -1 or error == -2 or error == -3:
             return raise_error(10, "Data sent in request was not valid to insert in database")
+
     else:
         return raise_error(9, "Authentication of the Gate failed")
 

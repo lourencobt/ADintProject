@@ -199,9 +199,9 @@ def postHistory():
     elif error == -1:
         return raise_error(11,"Arguments to create a new history are not in the correct format")
     elif error == -2:
-        return raise_error(15,"Gate doesn't exist")
+        return raise_error(15,"GateID not valid")
     elif error == -3:
-        return raise_error(16,"Date not valid : format 21/11/06 16:30 dd/mm/yyyy HH:MM")
+        return raise_error(16,"Date not valid")
     elif error == -4:
         return raise_error(10,"Data sent in request was not valid to insert in database")
     else:

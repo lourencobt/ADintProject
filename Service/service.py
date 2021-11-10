@@ -289,7 +289,6 @@ def userHistoryRequest():
     else:
         return "Error: You need to be logged in."
 
-
 # * Gate Web App + Service Endpoints implementation
 # WEB
 @app.route("/gateApp/WEB/", methods=["GET", "POST"])
@@ -310,7 +309,6 @@ def gateApp():
     except:
         return "Server is down for the moment. Try again later."
 
-    print(r.json())
     if r.status_code == 200:
         try:
             error = r.json()["error"]
@@ -343,6 +341,7 @@ def gateApp():
 @app.route("/gateApp/API/gates/<path:gateID>/code", methods=['POST'])
 def verifyCode(gateID):
     data = request.json
+    
     try:
         istID = data["istID"]
         gateSecret = session["gateSecret"]
@@ -404,7 +403,7 @@ def verifyCode(gateID):
                         errorDescription = r.json()["errorDescription"]
                     except:
                         return raise_error(8, "Incorrect GateDataService response")
-            
+
                     return raise_error(error, errorDescription)
 
             # Post to User history
