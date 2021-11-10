@@ -79,34 +79,6 @@ def validate_session():
     except:
         return "Error: Something went wrong in Server Response"
 
-    # Verify if session token is still valid
-    try:
-        istID = session['istID']
-    except:
-        return "Error: You are not logged in"
-
-    # Get user info to verify if user already exists
-    try:
-        r = requests.get(USERDATASERVICE + "API/users/{}".format(istID))
-    except:
-        return "Server is down for the moment. Try again later."
-
-    if r.status_code == 200:
-        try:
-            error = r.json()["error"]
-        except:
-            return "Error: Something went wrong in Server Response"
-        
-        if error != 0:
-            return  "Error: Something went wrong in Server Response"
-    else:
-        return "Error: Server not working correctly. Contact Admin"
-
-    try:
-        user_token = r.json()["userInfo"]["token"]
-    except:
-        return "Error: Something went wrong in Server Response"
-
     # if session token is valid
     if session['token'] == user_token:
         return True
@@ -415,6 +387,16 @@ def verifyCode(gateID):
 # * Admin Web App Endpoints implementation
 @app.route("/adminApp/WEB/createGate", methods=["GET","POST"])
 def completeForm():
+    
+    try:
+        istID = session['istID']
+    except:
+        return "Error: You are not logged in"
+
+    if session['admin']:
+        if not isAdmin(istID):
+            return "Error: you have no admin access!!!"
+    
     if request.method == "GET":
         return render_template("createGate.html")
     elif request.method == "POST":
@@ -462,6 +444,17 @@ def completeForm():
 # show a table with gates info (id, location, secret, activations)
 @app.route("/adminApp/WEB/gates")
 def allGatesAvailable():
+    
+    try:
+        istID = session['istID']
+    except:
+        return "Error: You are not logged in"
+
+    if session['admin']:
+        if not isAdmin(istID):
+            return "Error: you have no admin access!!!"
+    
+    
     r = getGates()
 
     if r == -1:
@@ -493,6 +486,16 @@ def allGatesAvailable():
 # anonimized history of every attempt to open a gate
 @app.route("/adminApp/WEB/history")
 def accessHistoryAllGates():
+   
+    try:
+        istID = session['istID']
+    except:
+        return "Error: You are not logged in"
+
+    if session['admin']:
+        if not isAdmin(istID):
+            return "Error: you have no admin access!!!"
+    
     try:
         r = requests.get(GATEDATASERVICE+"/API/gates/history")
     except:
@@ -524,6 +527,16 @@ def accessHistoryAllGates():
 # anonimized history of every attempt to open a specific gate
 @app.route("/adminApp/WEB/history/<path:gateID>")
 def accessHistoryOfSomeGate(gateID):
+    
+    try:
+        istID = session['istID']
+    except:
+        return "Error: You are not logged in"
+
+    if session['admin']:
+        if not isAdmin(istID):
+            return "Error: you have no admin access!!!"
+
     r = getHistoryofSomeGate(gateID)
 
     if r == -1:
@@ -640,26 +653,41 @@ def callback():
             return "Error: Server not working correctly. Contact Admin"
         
         if session['admin']:
-            #verify if ist in config.json
-            with open('config.json') as f:
-                data = json.load(f)
-            admins = data['admins']
-            for admin in admins:
-                if admin == istID:
-                    return redirect("/adminApp/WEB")
-            
-            return "Error: you have no admin access!!!"
+            if isAdmin(istID):
+                return redirect("/adminApp/WEB")
+            else:
+                return "Error: you have no admin access!!!"
                 
         else:
             return redirect("/userApp/WEB")
    
 @app.route("/adminApp/WEB", methods=["GET"])
 def homepageadmin():
+
     try:
         istID = session['istID']
     except:
         return "Error: You are not logged in"
-    return render_template("homePageAdmin.html" , username = istID)
+
+    if session['admin']:
+        if isAdmin(istID):
+            return render_template("homePageAdmin.html" , username = istID)
+        else:
+            return "Error: you have no admin access!!!"
+
+def isAdmin(istID):
+    
+    #verify if ist in config.json
+    with open('config.json') as f:
+        data = json.load(f)
+    
+    admins = data['admins']
+    
+    for admin in admins:
+        if admin == istID:
+            return True
+    
+    return False
 
 if __name__ == "__main__":
 
