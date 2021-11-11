@@ -311,6 +311,26 @@ def verifyCode(gateID):
         secretDate = datetime.datetime.fromisoformat(userInfo["dateSecret"])
 
         if verificationDate - secretDate > datetime.timedelta(minutes = 1):
+            # Post to gate history
+            r = postGateHistory({"gateID": gateID, "gateSecret": gateSecret,"success": False, "dateTime": str(verificationDate)})
+
+            if r == -1:
+                return "Error: Server not working correctly. Contact Admin"
+
+            if r.status_code == 200:
+                try:
+                    error = r.json()["error"]
+                except:
+                    return raise_error(8, "Incorrect GateDataService response")
+
+                if error != 0:
+                    try:
+                        errorDescription = r.json()["errorDescription"]
+                    except:
+                        return raise_error(8, "Incorrect GateDataService response")
+
+                    return raise_error(error, errorDescription)
+
             return {
                 "valid": False, 
                 "error": 0

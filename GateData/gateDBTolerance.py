@@ -85,8 +85,8 @@ def newGate(id, secret, location):
         return -4
     else: 
         gate = gates(id = id, secret = secret, location = location)
-        session.add(gate)
         try:
+            session.add(gate)
             session.commit()
         except:
             session.rollback()
@@ -109,8 +109,8 @@ def newHistory(gateId, success, attemptDate):
         return -2
     else:
         records = history(gateId = gateId, success = success, attemptDate = attemptDate)
-        session.add(records)
         try:
+            session.add(records)
             session.commit()
         except:
             session.rollback()

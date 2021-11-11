@@ -79,8 +79,15 @@
           }
           catch(e)
           {
-            stop = 0;
             console.log("Wrong Format when QRcode decoding");
+            outputData.innerText = code.data + "\n" + "You can't enter";
+            outputContainer.style.background = "rgb(167, 0, 0)";
+            setTimeout(function(){
+              console.log("setTimeouT");
+              stop = 0;
+              outputContainer.style.background = "#eee";
+              requestAnimationFrame(tick)
+            }, 2000)
           }
         } else {
           outputMessage.hidden = false;
@@ -95,7 +102,14 @@
     
     function request(code) {
       let text = code.data;
+      console.log(text)
       const obj = JSON.parse(text);
+      istID = obj.istID
+      console.log(istID)
+      secret = obj.secret
+      console.log(secret)
+
+      
 
       $.ajax({
         url: "/gateApp/API/gates/{{ gateID }}/code",
@@ -105,19 +119,17 @@
         data: text,
         success: function(data)
         {
+          console.log(data)
           if(data.error == 0 && data.valid == true)
           {
             outputContainer.style.background = "rgb(0, 226, 87)";
             outputData.innerText = code.data + "\n" + "You can enter";
             setTimeout(function(){
+              outputData.innerText = code.data + "\n" + "You can enter";
               outputContainer.style.background = "#eee";
               stop = 0;
               requestAnimationFrame(tick);
             }, 6000)
-          }
-          else if (data.error == 10)
-          {
-            request(code)
           }
           else
           {

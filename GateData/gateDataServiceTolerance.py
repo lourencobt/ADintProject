@@ -15,7 +15,6 @@
 # 9 → Authentication of the Gate Failed
 #10 → Data sent in request was not valid to insert in database
 
-# ! GET endpoints should perform authentication with gateID + Secret?
 
 from flask import Flask, request, abort
 from flask.json import jsonify
@@ -108,7 +107,7 @@ def validateSecret(gateID):
         secret = body["secret"]
     except:
         abort(400)
-    print(body)
+        
     #Verify there is such a code and if it is still valid
     if (error := secretOfGate(gateID)) == secret:
         return {
