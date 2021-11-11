@@ -17,21 +17,23 @@
 # Imports
 import os
 from requests_oauthlib import OAuth2Session
-from flask import Flask, config, render_template, request, abort, redirect, session, url_for
+from flask import Flask, render_template, request, abort, redirect, session, url_for
 from flask.json import jsonify
 import json
 import datetime 
 import requests
 from sqlalchemy.sql.functions import user
 from flask_qrcode import QRcode
-
-import sys
-sys.path.insert(1, "../GateData")
-from gateData import getGates, getHistoryofSomeGate
+from gateData import *
 
 GATEDATASERVICE = "http://localhost:8000/"
 USERDATASERVICE = "http://localhost:8002/"
 SECRET_LEN = 4
+#Information about my application in fenix
+client_id = "570015174623415"
+client_secret = "mE5JDJz+G53JEJBrYeSX2dD5YaMysnCqNykmvjd4mAWI3VuyGbnzSlgjIkCw36rn7ANvzYVy0YJ+4SNwJlUJxQ=="
+authorization_base_url = 'https://fenix.tecnico.ulisboa.pt/oauth/userdialog'
+token_url = 'https://fenix.tecnico.ulisboa.pt/oauth/access_token'
 
 import random
 def generate_code():
@@ -48,7 +50,6 @@ def generate_code():
 
 def raise_error(errorNumber, errorDescription):
     return {"error": errorNumber, "errorDescription":errorDescription}
-
 
 def validate_session():
     # Verify if session token is still valid
@@ -83,16 +84,40 @@ def validate_session():
     if session['token'] == user_token:
         return True
 
-#Information about my application in fenix
-client_id = "570015174623415"
-client_secret = "mE5JDJz+G53JEJBrYeSX2dD5YaMysnCqNykmvjd4mAWI3VuyGbnzSlgjIkCw36rn7ANvzYVy0YJ+4SNwJlUJxQ=="
-authorization_base_url = 'https://fenix.tecnico.ulisboa.pt/oauth/userdialog'
-token_url = 'https://fenix.tecnico.ulisboa.pt/oauth/access_token'
+def validate_admin_session():
+    try:
+        istID = session['istID']
+    except:
+        return "Error: You are not logged in"
+
+    if not validate_session():
+        return "Error: You are not logged in"
+    elif not isAdmin(istID):
+        return "Error: you have no admin access!"
+    
+    return True
+
+def isAdmin(istID):
+    
+    #verify if ist in config.json
+    with open('config.json') as f:
+        data = json.load(f)
+    
+    admins = data['admins']
+    
+    for admin in admins:
+        if admin == istID:
+            return True
+    
+    return False
 
 app = Flask(__name__)
 QRcode(app)
 
+# --------------------------------------------------
 # * User Web App Endpoints implementation
+# --------------------------------------------------
+
 # WEB
 @app.route("/userApp/WEB/login")
 def authorization():
@@ -107,18 +132,22 @@ def authorization():
     session['oauth_state'] = state
     session['admin'] = False
     return redirect(authorization_url)
-  
+
 @app.route("/userApp/WEB", methods=["GET"])
 def homepage():
+    # Verify if session token is still valid
     try:
         istID = session['istID']
     except:
+        return "Error: You are not logged in"    
+
+    if validate_session():
+        return render_template("homePage.html" , username = istID)
+    else:
         return "Error: You are not logged in"
-    return render_template("homePage.html" , username = istID)
 
 @app.route("/userApp/WEB/QRCode", methods=["GET"])
 def qrcodeRequest():
-    
     try:
         istID = session['istID']
     except:
@@ -126,33 +155,33 @@ def qrcodeRequest():
 
     # Verify if session token is still valid
     result = validate_session()
+    if result != True:
+        return result
 
-    if result == True:
-        qrcode_data= {'istID': istID, 'secret': generate_code()}
+    
+    qrcode_data= {'istID': istID, 'secret': generate_code()}
 
-        # Update secret to the most recent one
-        # If successful render qrcode
+    # Update secret to the most recent one
+    # If successful render qrcode
+    try:
+        r = requests.post( USERDATASERVICE + "API/users/"+ istID +"/secret", json = qrcode_data)
+    except:
+        return "Server is down for the moment. Try again later."
+
+    if r.status_code == 200:
         try:
-            r = requests.post( USERDATASERVICE + "API/users/"+ istID +"/secret", json = qrcode_data)
+            error = r.json()["error"]
         except:
-            return "Server is down for the moment. Try again later."
-
-        if r.status_code == 200:
-            try:
-                error = r.json()["error"]
-            except:
-                return "Error: Something went wrong in Server Response"
-            
-            if error == 0:
-                return render_template("qrcode.html", code = json.dumps(qrcode_data))
-            elif error != 0:
-                "Error: Server not working correctly. Contact Admin"  
-            else:
-                return "Error: Server not working correctly. Contact Admin"  
+            return "Error: Something went wrong in Server Response"
+        
+        if error == 0:
+            return render_template("qrcode.html", code = json.dumps(qrcode_data))
+        elif error != 0:
+            "Error: Server not working correctly. Contact Admin"  
         else:
             return "Error: Server not working correctly. Contact Admin"  
     else:
-        return "Error: You need to be logged in."
+        return "Error: Server not working correctly. Contact Admin"  
 
 @app.route("/userApp/WEB/history", methods=["GET"])
 def userHistoryRequest():
@@ -163,34 +192,35 @@ def userHistoryRequest():
 
     # Verify if session token is still valid
     result = validate_session()
+    if result != True:
+        return result
+    # Get user history and render it
+    try:
+        r = requests.get( USERDATASERVICE + "API/users/"+ istID +"/history")
+    except:
+        return "Server is down for the moment. Try again later."
 
-    if result == True:
-        # Get user history and render it
+    if r.status_code == 200:
         try:
-            r = requests.get( USERDATASERVICE + "API/users/"+ istID +"/history")
+            error = r.json()["error"]
         except:
-            return "Server is down for the moment. Try again later."
-
-        if r.status_code == 200:
+            return "Error: Something went wrong in Server Response"
+        if error == 0:
             try:
-                error = r.json()["error"]
+                history = r.json()["historyList"]
             except:
                 return "Error: Something went wrong in Server Response"
-            if error == 0:
-                try:
-                    history = r.json()["historyList"]
-                except:
-                    return "Error: Something went wrong in Server Response"
-                
-                return render_template("userHistory.html" , history = history )
-            elif error != 0:
-                return "Error: Server not working correctly. Contact Admin"  
-        else:
+            
+            return render_template("userHistory.html" , history = history )
+        elif error != 0:
             return "Error: Server not working correctly. Contact Admin"  
     else:
-        return "Error: You need to be logged in."
+        return "Error: Server not working correctly. Contact Admin"  
 
+# --------------------------------------------------
 # * Gate Web App + Service Endpoints implementation
+# --------------------------------------------------
+
 # WEB
 @app.route("/gateApp/WEB/", methods=["GET", "POST"])
 def gateApp():
@@ -204,38 +234,37 @@ def gateApp():
         except:
             abort(400)
 
-    # Do request to the DB
-    try:
-        r = requests.post(GATEDATASERVICE+"/API/gates/{}/secret".format(gateID), json={"secret": gateSecret})
-    except:
-        return "Server is down for the moment. Try again later."
-
-    if r.status_code == 200:
-        try:
-            error = r.json()["error"]
-        except:
-            return "Error: Something went wrong in Server Response"
+        r = postVerifySecret(gateID, {"secret": gateSecret})
         
-        if error == 0:
-            try:
-                valid = r.json()["valid"]
-            except:
-                return "Error: Something went wrong in Server Response"
+        if r == -1:
+            return "Error: Server not working correctly. Contact Admin"
 
-            if valid == True:
-                session["gateSecret"] = gateSecret
-                return render_template("scanner.html", gateID = gateID)
-            else:
-                return render_template("authenticateGate.html", secret_len = SECRET_LEN, message = "")
-        elif error > 0:
+        if r.status_code == 200:
             try:
-                errorDescription = r.json()["errorDescription"]
+                error = r.json()["error"]
             except:
                 return "Error: Something went wrong in Server Response"
             
-            return "Error: " + errorDescription
-    else:
-        abort(r.status_code)
+            if error == 0:
+                try:
+                    valid = r.json()["valid"]
+                except:
+                    return "Error: Something went wrong in Server Response"
+
+                if valid == True:
+                    session["gateSecret"] = gateSecret
+                    return render_template("scanner.html", gateID = gateID)
+                else:
+                    return render_template("authenticateGate.html", secret_len = SECRET_LEN)
+            elif error != 0:
+                try:
+                    errorDescription = r.json()["errorDescription"]
+                except:
+                    return "Error: Something went wrong in Server Response"
+                
+                return "Error: " + errorDescription
+        else:
+            abort(r.status_code)
 
 # API
 # for the Gate to verify if a code is valid
@@ -288,11 +317,11 @@ def verifyCode(gateID):
             }
         else:
             # Post to gate history
-            try:
-                r = requests.post(GATEDATASERVICE+"API/gates/access", json={"gateID": gateID, "gateSecret": gateSecret,"success": True, "dateTime": str(verificationDate)} )
-            except:
-                return raise_error(7, "Couldn't Reach GateDataService")
-            
+            r = postGateHistory({"gateID": gateID, "gateSecret": gateSecret,"success": True, "dateTime": str(verificationDate)})
+
+            if r == -1:
+                return "Error: Server not working correctly. Contact Admin"
+
             if r.status_code == 200:
                 try:
                     error = r.json()["error"]
@@ -356,11 +385,10 @@ def verifyCode(gateID):
                     }
     else:
         # Post to gate history
-        try:
-            r = requests.post(GATEDATASERVICE+"API/gates/access", json={"gateID": gateID, "gateSecret": gateSecret,"success": False, "dateTime": str(verificationDate)} )
-        except:
-            return raise_error(7, "Couldn't Reach GateDataService")
-        
+        r = postGateHistory({"gateID": gateID, "gateSecret": gateSecret,"success": False, "dateTime": str(verificationDate)})
+        if r == -1:
+            return "Error: Server not working correctly. Contact Admin"
+            
         if r.status_code == 200:
             try:
                 error = r.json()["error"]
@@ -383,20 +411,46 @@ def verifyCode(gateID):
                 "error": 0
         }
 
-
+# --------------------------------------------------
 # * Admin Web App Endpoints implementation
-@app.route("/adminApp/WEB/createGate", methods=["GET","POST"])
-def completeForm():
+# --------------------------------------------------
+
+#WEB
+# Endpoint to authenticate on adminApp
+@app.route("/adminApp/WEB/login")
+def authorizationAdmin():
+    #User Authorization.
+    #Redirect the user/resource owner to the OAuth provider (i.e. fenix)
+    #using an URL with a few key OAuth parameters.
     
+    fenix = OAuth2Session(client_id, redirect_uri="http://localhost:8001/callback")
+    authorization_url, state = fenix.authorization_url(authorization_base_url)
+
+    # State is used to prevent CSRF, keep this for later.
+    session['oauth_state'] = state
+    session['admin'] = True
+    return redirect(authorization_url)
+
+@app.route("/adminApp/WEB", methods=["GET"])
+def homepageadmin():
     try:
         istID = session['istID']
     except:
         return "Error: You are not logged in"
 
-    if session['admin']:
-        if not isAdmin(istID):
-            return "Error: you have no admin access!!!"
-    
+    result = validate_admin_session()
+    if result != True:
+        return result
+
+    return render_template("homePageAdmin.html" , username = istID)
+
+@app.route("/adminApp/WEB/createGate", methods=["GET","POST"])
+def completeForm():
+
+    result = validate_admin_session()
+    if result != True:
+        return result
+
     if request.method == "GET":
         return render_template("createGate.html")
     elif request.method == "POST":
@@ -410,10 +464,10 @@ def completeForm():
         except: 
             return "Error: Inserted information not in the correct format."
         
-        try: 
-            r = requests.post(GATEDATASERVICE+ "/API/gates" , json=dataJson.json)
-        except: 
-            return "Server is down for the moment. Try again later."
+        r = postCreateGate(dataJson.json)
+
+        if r == -1:
+            return "Error: Server not working correctly. Contact Admin"
         
         if r.status_code == 200:
             try:
@@ -428,7 +482,7 @@ def completeForm():
                     return "Error: Something went wrong in Server Response"
                 
                 return render_template("newGate.html", message = secret )
-            elif error > 0:
+            elif error != 0:
                 try:
                     errorDescription = r.json()["errorDescription"]
                 except:
@@ -444,17 +498,10 @@ def completeForm():
 # show a table with gates info (id, location, secret, activations)
 @app.route("/adminApp/WEB/gates")
 def allGatesAvailable():
-    
-    try:
-        istID = session['istID']
-    except:
-        return "Error: You are not logged in"
+    result = validate_admin_session()
+    if result != True:
+        return result
 
-    if session['admin']:
-        if not isAdmin(istID):
-            return "Error: you have no admin access!!!"
-    
-    
     r = getGates()
 
     if r == -1:
@@ -486,20 +533,14 @@ def allGatesAvailable():
 # anonimized history of every attempt to open a gate
 @app.route("/adminApp/WEB/history")
 def accessHistoryAllGates():
-   
-    try:
-        istID = session['istID']
-    except:
-        return "Error: You are not logged in"
+    result = validate_admin_session()
+    if result != True:
+        return result
 
-    if session['admin']:
-        if not isAdmin(istID):
-            return "Error: you have no admin access!!!"
-    
-    try:
-        r = requests.get(GATEDATASERVICE+"/API/gates/history")
-    except:
-        return "Server is down for the moment. Try again later."
+    r = getHistoryofAllGates()
+
+    if r == -1:
+        return "Error: Server not working correctly. Contact Admin"
 
     if r.status_code == 200:
         try:
@@ -527,15 +568,9 @@ def accessHistoryAllGates():
 # anonimized history of every attempt to open a specific gate
 @app.route("/adminApp/WEB/history/<path:gateID>")
 def accessHistoryOfSomeGate(gateID):
-    
-    try:
-        istID = session['istID']
-    except:
-        return "Error: You are not logged in"
-
-    if session['admin']:
-        if not isAdmin(istID):
-            return "Error: you have no admin access!!!"
+    result = validate_admin_session()
+    if result != True:
+        return result
 
     r = getHistoryofSomeGate(gateID)
 
@@ -563,23 +598,7 @@ def accessHistoryOfSomeGate(gateID):
             return "Error: " + errorDescription
     else:
         return "Error: Server not working correctly. Contact Admin"
-
-@app.route("/adminApp/WEB/login")
-def authorizationAdmin():
-    #User Authorization.
-    #Redirect the user/resource owner to the OAuth provider (i.e. fenix)
-    #using an URL with a few key OAuth parameters.
-    
-    fenix = OAuth2Session(client_id, redirect_uri="http://localhost:8001/callback")
-    authorization_url, state = fenix.authorization_url(authorization_base_url)
-
-    # State is used to prevent CSRF, keep this for later.
-    session['oauth_state'] = state
-    session['admin'] = True
-    return redirect(authorization_url)
-
-
-#Call back must be the same to both apps 
+   
 @app.route("/callback")
 def callback():
     
@@ -631,7 +650,10 @@ def callback():
             except:
                 return "Error: Something went wrong in Server Response"
             if error == 0:
-                return redirect("/userApp/WEB")
+                if session['admin']:
+                    return redirect("/adminApp/WEB")
+                else:
+                    return redirect("/userApp/WEB")
             else:
                 return  "Error: Something happened with your account. Contact Admin"
         else:
@@ -653,42 +675,10 @@ def callback():
             return "Error: Server not working correctly. Contact Admin"
         
         if session['admin']:
-            if isAdmin(istID):
-                return redirect("/adminApp/WEB")
-            else:
-                return "Error: you have no admin access!!!"
-                
+            return redirect("/adminApp/WEB")
         else:
             return redirect("/userApp/WEB")
-   
-@app.route("/adminApp/WEB", methods=["GET"])
-def homepageadmin():
-
-    try:
-        istID = session['istID']
-    except:
-        return "Error: You are not logged in"
-
-    if session['admin']:
-        if isAdmin(istID):
-            return render_template("homePageAdmin.html" , username = istID)
-        else:
-            return "Error: you have no admin access!!!"
-
-def isAdmin(istID):
     
-    #verify if ist in config.json
-    with open('config.json') as f:
-        data = json.load(f)
-    
-    admins = data['admins']
-    
-    for admin in admins:
-        if admin == istID:
-            return True
-    
-    return False
-
 if __name__ == "__main__":
 
     os.environ['OAUTHLIB_INSECURE_TRANSPORT'] = "1"

@@ -24,7 +24,7 @@ from sqlalchemy.sql.expression import insert
 
 from gateDBTolerance import *
 
-GATEDATASERVICE = "http://localhost:8000"
+GATEDATASERVICE = "http://localhost:7999"
 
 app = Flask(__name__)
 

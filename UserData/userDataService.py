@@ -98,8 +98,6 @@ def updateSecretUser(istID):
 
 @app.route("/API/users/<path:istID>/invalid", methods=['POST'])
 def updateAccessInvalid(istID):
-
-    data = request.json  
     try:
         id = istID
     except:
@@ -118,22 +116,21 @@ def updateAccessInvalid(istID):
 
 @app.route("/API/users", methods=['POST'])
 def resgistNewUser():
-
     data = request.json
-    
     try:
         id = data["istID"]
         token = data["token"]
     except:
         abort(400)
+
     if (error := newUser( id, token )) == 0:
             return { 
                 "error": 0
             }
     elif error == -1:
-        return raise_error(11,"Arguments to create a new user are not in the correct format.")
+        return raise_error(10,"Data sent in request was not valid to insert in database")
     elif error == -2:
-        return raise_error(12,"There is already a user with this ID.")
+        return raise_error(11,"There is already a user with this ID.")
     else:
         return raise_error(100, "Something went wrong")
     
@@ -171,7 +168,7 @@ def getHistory(istID):
                             "date": i.date 
                             })
     except:
-        return raise_error(13 ,"That is not a valid user")
+        return raise_error(12 ,"That is not a valid user")
 
     
     return {
@@ -199,9 +196,9 @@ def postHistory():
     elif error == -1:
         return raise_error(11,"Arguments to create a new history are not in the correct format")
     elif error == -2:
-        return raise_error(15,"GateID not valid")
+        return raise_error(6,"GateID not valid")
     elif error == -3:
-        return raise_error(16,"Date not valid")
+        return raise_error(13,"Date not valid")
     elif error == -4:
         return raise_error(10,"Data sent in request was not valid to insert in database")
     else:
